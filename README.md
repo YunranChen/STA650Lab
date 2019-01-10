@@ -1,6 +1,9 @@
 # STA650Lab
-Lab materials of STA650/450 Social Network.
-
+Lab materials of STA650/450 Social Network will be posted here.
+Lab session: Thursday 4:40 - 5:55 pm, Gray 228.
+Office hour: Wednesday 12:00 - 1:00 pm, Old Chem 025.
+Homework submission: via slack.
+Contact me: via slack.
 
 ## Outline
 
