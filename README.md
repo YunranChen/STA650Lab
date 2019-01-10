@@ -13,5 +13,9 @@ Lab materials of STA650/450 Social Network.
   
 - Visualization (static and dynamic networks).
 
+  - https://briatte.github.io/ggnet/
+  - http://kateto.net/netscix2016
+  - http://kateto.net/network-visualization
+
 - Basic network analysis.
 
