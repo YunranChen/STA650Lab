@@ -12,7 +12,7 @@ Contact me: via slack.
 
 ## Outline
 
-- Basic introduction on network objects. R packages including `igraph`, `sna`, `network`.
+- Basic introduction on network objects. R packages including `igraph`, `statnet`(including `sna`, `network`).
 
 - Collect network data. 
   - Web API requesting (Twitter, Reddit, IMDB, or more).
