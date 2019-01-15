@@ -55,9 +55,12 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Book: https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf
     - Datasets: https://github.com/mathbeveridge/asoiaf
                 https://networkofthrones.wordpress.com/data/
+                https://www.macalester.edu/~abeverid/thrones.html
 - Lab 3: `statnet`
   - ergm
   - ...
+  - References:
+    - Tutorial: https://statnet.csde.washington.edu/trac/raw-attachment/wiki/Sunbelt2014/introToSNAinR-handout.pdf 
 - Lab 4: Collect network data and API requests
   - Several useful websites: SNAP
   - twitteR API request
