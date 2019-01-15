@@ -29,3 +29,36 @@ Contact me: via slack.
 
 
 If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16/ 
+
+
+## Detailed outline
+
+- Lab 1: `igraph` basics
+  - Create simple networks
+  - Edge, vertex and network attributes
+  - Specific graphs
+  - Graph models
+  - Network and node descriptions
+  - References: 
+    
+- Lab 2: `igraph` advance
+  - Get network from files (edgelist, matrix, dataframe)
+  - Distances and paths
+  - Subgroups and communities
+  - Visualization (basic)
+  - Case study
+  - References: 
+    - Tutorial: http://kateto.net/networks-r-igraph
+    - Handbook: http://igraph.org/r/
+    - Book: https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf
+- Lab 3: `statnet`
+  - ergm
+  - ...
+- Lab 4: Collect network data and API requests
+  - Several useful websites: SNAP
+  - twitteR API request
+- Lab 5: API requests
+  - Reddit API requests
+  - IMDB API requests
+- Lab 6: Visualization
+- Lab 7: Network analysis (TBD)
