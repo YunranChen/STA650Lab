@@ -21,9 +21,6 @@ Contact me: via slack.
   
 - Visualization (static and dynamic networks).
 
-  - https://briatte.github.io/ggnet/
-  - http://kateto.net/netscix2016
-  - http://kateto.net/network-visualization
 
 - Basic network analysis.
 
@@ -40,17 +37,24 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
   - Graph models
   - Network and node descriptions
   - References: 
-    
+    - Tutorial: http://kateto.net/networks-r-igraph
+    - Handbook: http://igraph.org/r/
+    - Book: https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf  
 - Lab 2: `igraph` advance
   - Get network from files (edgelist, matrix, dataframe)
   - Distances and paths
   - Subgroups and communities
-  - Visualization (basic)
+  - Visualization
+    - Plotting parameters
+    - Layouts
+    - Other (two-mode networks, heatmap, ...)
   - Case study
   - References: 
     - Tutorial: http://kateto.net/networks-r-igraph
     - Handbook: http://igraph.org/r/
     - Book: https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf
+    - Datasets: https://github.com/mathbeveridge/asoiaf
+                https://networkofthrones.wordpress.com/data/
 - Lab 3: `statnet`
   - ergm
   - ...
@@ -61,4 +65,8 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
   - Reddit API requests
   - IMDB API requests
 - Lab 6: Visualization
+  - References:
+    - https://briatte.github.io/ggnet/
+    - http://kateto.net/netscix2016
+    - http://kateto.net/network-visualization
 - Lab 7: Network analysis (TBD)
