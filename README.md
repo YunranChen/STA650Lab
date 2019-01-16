@@ -31,10 +31,9 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
 ## Detailed outline
 
 - Lab 1: `igraph` basics
-  - Create simple networks
+  - Create simple networks, Specific graphs, Graph models
+  - Adjustments on graphs, rewiring graphs
   - Edge, vertex and network attributes
-  - Specific graphs
-  - Graph models
   - Network and node descriptions
   - References: 
     - Tutorial: http://kateto.net/networks-r-igraph
