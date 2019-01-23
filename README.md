@@ -41,13 +41,10 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Book: https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf  
 - Lab 2: `igraph` basics
   - Get network from files (edgelist, matrix, dataframe)
-  - Distances and paths
-  - Subgroups and communities
   - Visualization
     - Plotting parameters
     - Layouts
-    - Other (two-mode networks, heatmap, ...)
-  - Case study
+  - Network and node descriptions
   - References: 
     - Tutorial: http://kateto.net/networks-r-igraph
     - Handbook: http://igraph.org/r/
@@ -55,20 +52,27 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Datasets: https://github.com/mathbeveridge/asoiaf
                 https://networkofthrones.wordpress.com/data/
                 https://www.macalester.edu/~abeverid/thrones.html
-- Lab 3: `statnet`
+- Lab 3: `igraph` basics
+  - Distances and paths
+  - Subgroups and communities
+  - Visualization on communities
+- Lab 4: `statnet`
   - ergm
   - ...
   - References:
     - Tutorial: https://statnet.csde.washington.edu/trac/raw-attachment/wiki/Sunbelt2014/introToSNAinR-handout.pdf 
-- Lab 4: Collect network data and API requests
+- Lab 5: Collect network data and API requests
   - Several useful websites: SNAP
   - twitteR API request
-- Lab 5: API requests
+- Lab 6: API requests
   - Reddit API requests
   - IMDB API requests
-- Lab 6: Visualization
+- Lab 7: Visualization
+  - Other (two-mode networks, heatmap, ...)
+  - Interaction surface
+  - Dynamic network
   - References:
     - https://briatte.github.io/ggnet/
     - http://kateto.net/netscix2016
     - http://kateto.net/network-visualization
-- Lab 7: Network analysis (TBD)
+- Lab 8: Network analysis (TBD)
