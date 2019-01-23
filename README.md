@@ -56,6 +56,13 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
   - Distances and paths
   - Subgroups and communities
   - Visualization on communities
+  - References: 
+    - Tutorial: http://kateto.net/networks-r-igraph
+    - Handbook: http://igraph.org/r/
+    - Book: https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf
+    - Datasets: https://github.com/mathbeveridge/asoiaf
+                https://networkofthrones.wordpress.com/data/
+                https://www.macalester.edu/~abeverid/thrones.html
 - Lab 4: `statnet`
   - ergm
   - ...
