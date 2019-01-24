@@ -1,0 +1,630 @@
+---
+title: "LAB2"
+author: "YunranChen"
+date: "1/14/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+- R package `igraph` 
+    - Get network from files (edgelist, matrix, dataframe)
+    - Visualization
+        - Plotting parameters
+        - Layouts
+    - Network and node descriptions
+    
+
+## Dataset
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/got-network.png")
+```
+
+## `igraph`
+
+- Official website (handbook): <http://igraph.org/r/>
+- Tutorial: <http://kateto.net/networks-r-igraph>
+- Book: <https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf>
+- Datasets: Download the data from my github. The full dataset comes from <https://github.com/mathbeveridge/asoiaf>
+- Analysis on the datasets: <https://www.macalester.edu/~abeverid/thrones.html>
+
+## Preparation
+
+```{r install, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("igraph")
+#install.packages("igraphdata")
+library(igraph)
+library(igraphdata)
+
+#install.packages(dplyr)
+#install.packages(tidyr)
+#install.packages(stringr)
+```
+
+
+# 1. Get network from files
+
+
+## Creating network
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/cnet_all.png")
+```
+
+---
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/cnet1.png")
+```
+
+---
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/cnet3.png")
+```
+
+---
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/cnet2.png")
+```
+
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/cnet4.png")
+```
+
+
+## 1. Get network from files
+
+- `graph_from_adjacency_matrix()`
+- `graph_from_edgelist()`
+- `graph_from_data_frame()`
+
+## 1.1 `graph_from_adjacency_matrix()`
+
+Used for creating a small matrix. 
+
+The networks in real world are usually large sparse matrix and stored as a edgelist.
+
+Binary matrix:
+
+```{r,echo=TRUE}
+set.seed(2)
+#sample from Bernoulli distribution with sample size 100. 
+adjm <- matrix(sample(0:1, 100, replace=TRUE, prob=c(0.9,0.1)), nc=10)
+adjm
+g1 <- graph_from_adjacency_matrix( adjm )
+set.seed(1)
+plot(g1)
+#default is directed
+g2 <- graph_from_adjacency_matrix( adjm ,mode = "undirected")
+set.seed(1)
+plot(g2)
+#get rid of the self-loop (in real-world maybe self-loop does not make any sense)
+g3 <- graph_from_adjacency_matrix( adjm ,mode = "undirected",diag = FALSE)
+set.seed(1)
+plot(g3)
+```
+
+---
+
+Sparse matrix:
+
+```{r,echo=TRUE}
+adjms=g1[]
+adjms
+g4=graph_from_adjacency_matrix(adjms)
+set.seed(1)
+plot(g4)
+
+```
+
+---
+
+Weighted matrix
+
+```{r, echo=TRUE}
+set.seed(1)
+adjmw <- matrix(sample(0:5, 100, replace=TRUE,
+                      prob=c(0.9,0.02,0.02,0.02,0.02,0.02)), nc=10)
+adjmw
+g5 <- graph_from_adjacency_matrix(adjmw, weighted=TRUE)
+set.seed(1)
+plot(g5)
+g5
+E(g5)$weight
+```
+
+---
+
+Named matrix
+
+```{r,echo=TRUE}
+rownames(adjmw)=LETTERS[1:10]
+colnames(adjmw)=LETTERS[1:10]
+g6 <- graph_from_adjacency_matrix(adjmw, weighted=TRUE)
+set.seed(1)
+plot(g6)
+
+```
+
+## 1.2 `graph_from_edgelist()`
+
+ Most network datasets are stored as edgelists.
+ Input is **two-column matrix** with each row defining one edge.
+
+```{r, echo=TRUE}
+gotdf=read.csv("gotstark_lannister.csv",stringsAsFactors = FALSE)
+head(gotdf,5)
+```
+
+```{r message=FALSE, warning=FALSE,echo=TRUE}
+library(dplyr)
+library(tidyr)
+```
+
+```{r,echo=TRUE}
+gotdf.el=gotdf%>%select(Source,Target,weight)%>%
+  group_by(Source,Target)%>%
+  expand(edge=c(1:weight))%>%select(-edge)
+head(gotdf.el)
+```
+
+---
+
+```{r,echo=TRUE}
+## input need to be a matrix
+got1=graph_from_edgelist(gotdf.el%>%as.matrix(),directed = FALSE)
+got1
+plot(got1,edge.arrow.size=.5, vertex.color="gold", vertex.size=3, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=2, edge.curved=0.2)
+
+```
+
+
+## Simplify the network
+
+```{r,echo=TRUE}
+el <- matrix( c("foo", "bar","foo","bar", "bar", "foobar"), nc = 2, byrow = TRUE)
+graph_from_edgelist(el)%>%plot()
+```
+
+```{r,echo=TRUE}
+E(got1)$weight=rep(1,ecount(got1))
+got1s <- igraph::simplify( got1, remove.multiple = T, remove.loops = F, 
+                 edge.attr.comb=c(weight="sum"))
+plot(got1s,edge.arrow.size=.5, vertex.color="gold", vertex.size=3, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=2, edge.curved=0.5,layout=layout_with_lgl)
+```
+
+## Short name
+
+```{r,echo=TRUE, message=FALSE, warning=FALSE}
+library(stringr)
+```
+
+
+```{r,echo=TRUE}
+nameshort=V(got1s)$name%>%
+  str_split(.,"-",simplify = TRUE)%>%
+  .[,1]
+V(got1s)$name[1:3]
+nameshort[1:3]
+V(got1s)$name=nameshort
+plot(got1s,edge.arrow.size=.5, vertex.color="gold", vertex.size=3, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=2, edge.curved=0.5,layout=layout_with_lgl)
+
+```
+
+## 1.3 `graph_from_data_frame()`
+
+Most common and useful.
+
+d: a  data frame containing a symbolic edge list in the first two columns. Additional columns are considered as edge attributes.
+
+vertices: A data frame with vertex metadata
+
+```{r,echo=TRUE}
+head(gotdf,5)
+gotdf=gotdf%>%select(-X)
+got2=graph_from_data_frame(d=gotdf,directed = FALSE)
+got2
+plot(got2,edge.arrow.size=.5, vertex.color="gold", vertex.size=3, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=2, edge.curved=0.5,layout=layout_with_lgl)
+
+```
+
+## get dataframe, matrix or edgelist from igraph object
+
+```{r,echo=TRUE}
+igraph::as_data_frame(got2)%>%head(2)
+as_adjacency_matrix(got2)%>%head(2)
+as_edgelist(got2)%>%head(2)
+```
+
+## `read_graph`, `write_graph`
+
+```{r,echo=TRUE}
+## store in txt or csv or others 
+write_graph(graph = got2,file = "g.txt",format = "edgelist")
+read_graph(file = "g.txt",format = "edgelist",directed=F)
+
+## store the whole graph
+write_graph(got2,file = "gg",format = "pajek")
+read_graph(file="gg",format="pajek")
+got2
+```
+
+
+
+# 2. Visualization 
+
+## 2. Visualization 
+
+- Plotting parameters: mapping important attributes to visual properties
+- Find a good layout
+
+```{r,echo=TRUE}
+?igraph.plotting
+```
+
+## 2.1 Plotting parameters
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/node.png")
+```
+
+---
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/edge.png")
+```
+
+---
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/other.png")
+```
+
+---
+
+```{r,echo=TRUE}
+plot(got2, vertex.color="gold", vertex.size=3, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=2, edge.curved=0.5,layout=layout_with_lgl)
+
+```
+
+## To make the graph look nicer
+
+- Node color: using family name
+- Node size:  degree
+- Edge width: weight
+
+```{r,echo=TRUE}
+## store the fullname
+fullnames=V(got2)$name
+fullnames[1:3]
+#get family name
+familynames=fullnames%>%str_split("-",simplify = TRUE)%>%.[,2]
+familynames[familynames==""]="None"
+familynames[familynames=="(guard)"]="None"
+# add vertices attributes
+V(got2)$familyname=familynames
+V(got2)$fullname=fullnames
+firstnames=fullnames%>%str_split("-",simplify = TRUE)%>%.[,1]
+V(got2)$name=firstnames # first name
+```
+
+---
+
+Set colors and legend.
+
+- pch: plotting symbols appearing in the legend
+- pt.bg: background color for point
+- cex: text size
+- pt.cex: point size
+- ncol: number of columns of the legend
+- bty: "o"-- rectangle box; "n" -- no box
+
+```{r,echo=TRUE}
+vcol=V(got2)$familyname
+vcol[(vcol!="Stark")&(vcol!="Lannister")]="gray50"
+vcol[vcol=="Stark"]="tomato"
+vcol[vcol=="Lannister"]="gold"
+V(got2)$color=vcol
+V(got2)$size=degree(got2)%>%log()*4
+E(got2)$width=E(got2)$weight%>%log()/2
+plot(got2, vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=1, edge.curved=0.5,layout=layout_with_dh)
+legend("right", legend = c("Stark","Lannister","Other"), pch=21,
+       col=c("tomato","gold","gray50"), pt.bg=c("tomato","gold","gray50"), pt.cex=1, cex=.8, bty="n", ncol=1)
+
+```
+
+--- 
+
+Plot only labels of the nodes
+
+```{r,echo=TRUE}
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5, vertex.label.dist=2, edge.curved=0.5,layout=layout_with_kk)
+```
+
+
+## 2.2 Layouts
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab2/layouts.png")
+```
+
+---
+
+Force-directed layouts: suitable for general, small to medium sized graphs. (computational complexity; based on physical analogies)
+
+- layout_with_fr: Fruchterman-Reingold is one of the most used force-directed layout algorithms. Force-directed layouts try to get a nice-looking graph where edges are similar in length and cross each other as little as possible. As a result, nodes are evenly distributed through the chart area, and the layout is intuitive in that nodes which share more connections are closer to each other.
+- layout_with_kk: Another popular force-directed algorithm that produces nice results for connected graphs is Kamada Kawai.
+- layout_with_graphopt: ...
+
+For large graphs:
+
+- layout_with_lgl: The LGL algorithm is meant for large, connected graphs. Here you can also specify a root: a node that will be placed in the middle of the layout.
+- layout_with_drl:
+- layout_with_gfr:
+
+---
+
+- layout_with_dh:simulated annealing algorithm by Davidson and Harel
+
+```{r,echo=TRUE}
+#layout_with_dh
+plot(got2, vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=layout_with_dh)
+legend("right", legend = c("Stark","Lannister","Other"), pch=21,
+       col=c("tomato","gold","gray50"), pt.bg=c("tomato","gold","gray50"), pt.cex=1, cex=.8, bty="n", ncol=1)
+
+```
+
+---
+
+Selecting a layout automatically
+
+- connected and vcount<=100: kk
+- vcount<=1000:fr
+- else: drl
+
+```{r,echo=TRUE}
+plot(got2, vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=layout.auto(got2))
+
+```
+
+
+---
+
+Without label and color the edge.
+
+```{r, echo=TRUE}
+set.seed(2)
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=layout_with_dh)
+```
+
+---
+
+```{r,echo=TRUE}
+##color the edge
+got2
+ecol=rep("gray50",ecount(got2))
+ecol[E(got2)$source.family=="Stark"]="tomato"
+ecol[E(got2)$source.family=="Lannister"]="gold"
+ecol[(ecol=="tomato")&(E(got2)$target.family=="Lannister")&(!is.na(E(got2)$target.family))]="orange"
+ecol[(ecol=="gold")&(E(got2)$target.family=="Stark")&(!is.na(E(got2)$target.family))]="orange"
+
+set.seed(2)
+plot(got2, vertex.shape="none",vertex.label.color="black", edge.color=ecol,
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=layout_with_dh)
+legend("right", legend = c("Stark","Lannister","Stark-Lannister","Other"),
+       col=c("tomato","gold","orange","gray50"), lty=rep(1,4), cex=.8, bty="n", ncol=1)
+
+```
+
+## layout is not deterministic
+
+Different runs will result in slightly different configurations. **Saving the layout** or **set.seed** allows us to get the exact same result multiple times, which can be helpful if you want to plot the time evolution of a graph, or different relationships – and want nodes to stay in the same place in multiple plots.
+
+```{r,echo=TRUE}
+set.seed(1)
+l=layout_with_dh(got2)
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=l)
+
+```
+
+---
+
+rescale
+
+- `norm_coords`
+- `rescale=F`
+- can use `layout=l*2`
+
+```{r,echo=TRUE}
+l=layout_with_fr(got2)
+l <- norm_coords(l, ymin=-1, ymax=1, xmin=-1, xmax=1) #default -- scaled
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=l,rescale=F)
+
+```
+
+---
+
+Will introduce interactive r packages next time. 
+
+```{r,echo=TRUE}
+par(mfrow=c(2,2), mar=c(0,0,0,0))
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=l*0.5,rescale=F)
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=l*0.8,rescale=F)
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=l*1,rescale=F) 
+plot(got2, vertex.shape="none",vertex.label.color="black", 
+     vertex.label.cex=.5,vertex.label.dist=0.2, edge.curved=0.5,layout=l*2,rescale=F)
+#dev.off()
+
+```
+
+
+# 3. Network and node descriptions
+
+---
+
+- Density: `edge_density`
+- Degree: `degree`
+- centrality and centralization: 
+    - `centr_degree`  
+    - `closeness`, `centr_clo`
+    - `eigen_centrality`, `centr_eigen`
+    - `betweenness`, `edge_betweenness`, `centr_betw`
+- reciprocity,transitivity,diameter,...
+    
+## Density
+
+The proportion of present edges from all possible ties.
+
+```{r,echo=TRUE}
+edge_density(got2, loops=F)
+ecount(got2)/(vcount(got2)*(vcount(got2)-1))*2 #for an undirected network
+```
+
+
+## Node degrees
+
+'degree' has a mode of 'in' for in-degree, 'out' for out-degree, and 'all' or 'total' for total degree. 
+
+Notice the graph is undirected. So there is no difference under different parameter setting.
+
+```{r,echo=TRUE}
+deg <- degree(got2, mode="all")
+hist(deg, breaks=1:vcount(got2)-1, main="Histogram of node degree")
+deg.dist <- degree_distribution(got2, cumulative=T, mode="all")
+plot( x=0:max(deg), y=1-deg.dist, pch=19, cex=1.2, col="orange", 
+      xlab="Degree", ylab="Cumulative Frequency")
+```
+
+## centrality and centralization
+
+Who is the most important character?
+
+- Degree
+- Closeness
+- Eigenvector
+- Betweeness
+
+---
+
+Degree (number of ties).
+
+Normalization should be the max degree the network can get
+
+```{r,echo=TRUE}
+degree(got2, mode="in",loops = F)%>%sort(decreasing = TRUE)%>%.[1:5]
+#Notice this is undirected network, the choice of mode does not matter
+centr_degree(got2, mode="in", normalized=T,loops = F)$res%>%sort(decreasing = TRUE)%>%.[1:5]
+centr_degree(got2, mode="all", normalized=T,loops = F)$res%>%sort(decreasing = TRUE)%>%.[1:5]
+
+#Pay attention to whether allowing self-loop or not
+# Normalization may differ due to the setting
+centr_degree(got2, mode="all", normalized=T,loops = F)$theoretical_max
+centr_degree(got2, mode="in", normalized=T,loops = F)$theoretical_max
+centr_degree(got2, mode="in", normalized=T,loops = T)$theoretical_max
+```
+
+---
+
+Closeness (centrality based on distance to others in the graph)
+Inverse of the node's average geodesic distance to others in the network
+
+```{r,echo=TRUE}
+#whether to include weight or not
+#If a graph has edge attribute weight, the weight will be automatically took into consideration
+closeness(got2, mode="all", weights=NA) %>%sort(decreasing = TRUE)%>%.[1:5]
+closeness(got2, mode="all")%>%sort(decreasing = TRUE)%>%.[1:5]
+centr_clo(got2, mode="all", normalized=T)$res %>%sort(decreasing = TRUE)%>%.[1:5]
+```
+
+--- 
+
+Eigenvector (centrality proportional to the sum of connection centralities)
+Values of the first eigenvector of the graph adjacency matrix
+
+```{r,echo=TRUE}
+
+eigen_centrality(got2, directed=F, weights=NA)$vector%>%sort(decreasing = TRUE)%>%.[1:5]
+eigen_centrality(got2, directed=F)$vector%>%sort(decreasing = TRUE)%>%.[1:5]
+
+centr_eigen(got2, directed=F, normalized=T) $vector%>%sort(decreasing = TRUE)%>%.[1:5]
+```
+
+--- 
+
+Betweenness 
+
+The betweenness centrality for each vertex is the number of these shortest paths that pass through the vertex.
+
+```{r,echo=TRUE}
+betweenness(got2, directed=F, weights=NA)%>%sort(decreasing = TRUE)%>%.[1:5]
+betweenness(got2, directed=F)%>%sort(decreasing = TRUE)%>%.[1:5]
+centr_betw(got2, directed=F, normalized=T)$res%>%sort(decreasing = TRUE)%>%.[1:5]
+
+```
+
+---
+
+The edge betweenness centrality is defined as the number of the shortest paths that go through an **edge** in a graph or network. (result will be different from `betweenness`)
+
+```{r,echo=TRUE}
+ecount(got2)
+vcount(got2)
+edge_betweenness(got2, directed=F, weights=NA)
+
+```
+
+## Other properties
+
+- transitivity
+- reciprocity
+- clustering coefficient
+- ...
+
+# Exercise
+
+## Exercise
+
+- Download dataset to get network in book3 <https://github.com/mathbeveridge/asoiaf>.
+- Only keep the nodes with degree over 5.
+- Only keep the nodes connected to family "Stark", "Targaryen" and "Lannister".
+- Present the network nicely
+- List the top 5 most important character.
