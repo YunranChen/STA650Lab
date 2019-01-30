@@ -53,10 +53,19 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
                 https://networkofthrones.wordpress.com/data/
                 https://www.macalester.edu/~abeverid/thrones.html
 - Lab 3: `igraph` basics
-  - Transitivity, reciprocity and clustering coefficient
-  - Distances and paths
-  - Subgroups and communities
-  - Visualization on communities
+   - Paths
+      - Paths, distances and diameter
+      - Components
+      - Transitivity and reciprocity
+      - Max-flow and min-cut
+   - Communities
+      - Pre-defined clusters
+      - Different algorithms
+   - Visualization
+      - Color the paths
+      - Plotting clusters
+      - Plotting dendrograms
+      - Mark groups
   - References: 
     - Tutorial: http://kateto.net/networks-r-igraph
     - Handbook: http://igraph.org/r/
