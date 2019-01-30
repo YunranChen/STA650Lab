@@ -22,7 +22,7 @@ Contact me: via slack.
 - Visualization (static and dynamic networks).
 
 
-- Basic network analysis.
+- Network analysis using package `amen`.
 
 
 If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16/ 
@@ -53,6 +53,7 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
                 https://networkofthrones.wordpress.com/data/
                 https://www.macalester.edu/~abeverid/thrones.html
 - Lab 3: `igraph` basics
+  - Transitivity, reciprocity and clustering coefficient
   - Distances and paths
   - Subgroups and communities
   - Visualization on communities
@@ -63,18 +64,25 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Datasets: https://github.com/mathbeveridge/asoiaf
                 https://networkofthrones.wordpress.com/data/
                 https://www.macalester.edu/~abeverid/thrones.html
-- Lab 4: `statnet`
+- Lab 4: Algorithm
+- Lab 5: ERGM (`statnet`)
   - ergm
   - ...
   - References:
     - Tutorial: https://statnet.csde.washington.edu/trac/raw-attachment/wiki/Sunbelt2014/introToSNAinR-handout.pdf 
-- Lab 5: Collect network data and API requests
+- Lab 6: Collect network data and API requests
   - Several useful websites: SNAP
   - twitteR API request
-- Lab 6: API requests
+- Lab 7: API requests
   - Reddit API requests
   - IMDB API requests
-- Lab 7: Visualization
+- No lab on March 7th (Spring Break).
+- Lab 8: Epidemiological modeling of news spreading on Twitter (course project)
+  - How to collect data.
+  - Basic network analysis.
+  - References:
+    - https://github.com/YunranChen/HiggsBoson 
+- Lab 9: Visualization (March 21st)
   - Other (two-mode networks, heatmap, ...)
   - Interaction surface
   - Dynamic network
@@ -82,4 +90,7 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - https://briatte.github.io/ggnet/
     - http://kateto.net/netscix2016
     - http://kateto.net/network-visualization
-- Lab 8: Network analysis (TBD)
+- Lab 10: `AMEN` packages (March 28th)
+  - References: 
+    - https://github.com/pdhoff/amen/blob/master/inst/doc/amen.pdf 
+- No lab session after March 28th.
