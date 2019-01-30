@@ -1,0 +1,513 @@
+---
+title: "LAB2"
+author: "YunranChen"
+date: "1/30/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+- R package `igraph` 
+    - Paths
+        - Paths, distances and diameter
+        - Components
+        - Transitivity and reciprocity
+        - Max-flow and min-cut
+    - Communities
+        - Pre-defined clusters
+        - Different algorithms
+    - Visualization
+        - Color the paths
+        - Plotting clusters
+        - Plotting dendrograms
+        - Mark groups
+    
+## `igraph`
+
+- Official website (handbook): <http://igraph.org/r/>
+- Book: <https://sites.fas.harvard.edu/~airoldi/pub/books/BookDraft-CsardiNepuszAiroldi2016.pdf>
+
+
+## Preparation
+
+```{r install, echo=TRUE, message=FALSE, warning=FALSE}
+library(igraph)
+library(igraphdata)
+data(USairports)
+data(karate)
+```
+
+```{r,echo=TRUE}
+?USairports
+?karate
+```
+
+## Preprocess
+
+```{r,echo=TRUE}
+USairports
+#should have no self-loop
+sum(which_loop(USairports))
+USairports <- simplify(USairports, remove.loops = TRUE, remove.multiple = FALSE)
+sum(which_loop(USairports))
+#different carrier and aircraft types leading to multiple graphs
+USairports[["RDU","JFK",edges=TRUE]][[1]][[1:5]]
+#simplify
+air <- simplify(USairports, edge.attr.comb =list(Departures = "sum", Seats = "sum", Passengers = "sum",Distance="mean", "ignore"))
+air
+air[["RDU","JFK",edges=TRUE]]
+```
+
+
+# Paths
+
+## Paths, distances and diameter
+
+
+##  Select specific paths
+
+Select specific paths
+
+```{r,echo=TRUE}
+#select length 1 path
+air[[from="RDU",to="BOS",edges=TRUE]]
+
+# select >=1 paths
+flight_rdu_bos=V(air)["RDU","JFK","BOS"]
+E(air,path=flight_rdu_bos)
+
+#another way
+E(air)["RDU"%->%"JFK","JFK"%->%"BOS"]
+
+```
+
+
+## Shortest paths
+
+Many paths between edges. Direct flight or multiple steps.
+
+Length of path: number of edges included in a path
+
+`shortest_paths`: only one of the shortest paths
+
+`all_shortest_paths`: all the shortest paths; `nrgeo` is the resultant vector of values from Djikstra's algorithm which is used to find the shortest paths. 
+
+```{r,echo=TRUE}
+#arkansas airport-XNA
+shortest_paths(air,from="RDU",to = "XNA",weights = E(air)$Distance)$vpath
+shortest_paths(air,from="RDU",to = "XNA",weights = NA)$vpath #one of the shortest path
+shortest_paths(air,from="RDU",to = "XNA",mode = "in",weights = NA)$vpath #to
+shortest_paths(air,from="RDU",to = "XNA",mode = "out",weights = NA)$vpath #from
+shortest_paths(air,from="RDU",to = "XNA",mode = "all",weights = NA)$vpath #undirected
+
+all_shortest_paths(air,from="RDU",to = "XNA",weight=NA)$res
+all_shortest_paths(air,from="RDU",to = "XNA",weights = E(air)$Distance)$res
+
+```
+
+## Color certain paths:
+
+Color the path from `Actor 33` to `Mr Hi` and set the width for the path.
+
+```{r,echo=TRUE}
+path_vk=shortest_paths(karate,from="Actor 33", to="Mr Hi")$vpath[[1]]
+ecol=rep("gray80",ecount(karate))
+ecol[E(karate,path = path_vk)]="orange"
+ew=rep(1,ecount(karate))
+ew[E(karate,path = path_vk)]=3
+plot(karate,edge.color=ecol,edge.width=ew)
+```
+
+
+## distance
+
+Distance: length of shortest path
+
+`distance_table`: The frequency of shortest path length between each pair of vertices.
+
+```{r,echo=TRUE}
+distance_table(air)
+# unconnected: the number of pairs for which the first vertex is not reachable from the second
+```
+
+---
+
+`distances`
+
+```{r,echo=TRUE}
+distances(air,"RDU","XNA",weights = NA) # not consider the weight
+
+distances(air,"RDU","XNA",weights =  E(air)$Distance) # specify the weight
+# how the function `distances` works
+(shortest_paths(air,from="RDU",to = "XNA",weights = E(air)$Distance)$vpath[[1]])
+E(air)["RDU"%->%"CLT","CLT"%->%"XNA"]$Distance%>%sum()
+
+#can return a distance matrix
+distances(air,c("BOS","JFK","RDU","XNA"),c("BOS","JFK","RDU","XNA"),weights = E(air)$Distance,mode = "all") #undirected
+distances(air,c("BOS","JFK","RDU","XNA"),c("BOS","JFK","RDU","XNA"),weights = E(air)$Distance,mode = "in") #focus on to
+distances(air,c("BOS","JFK","RDU","XNA"),c("BOS","JFK","RDU","XNA"),weights = E(air)$Distance,mode = "out") #focus on from # tranpose of mode "in"
+
+```
+
+---
+
+`mean_distance`:  average path length in a graph, by calculating the shortest paths between **all** pairs of vertices (both ways for directed graphs). **does not consider edge weights currently** and uses a breadth-first search.
+
+```{r,echo=TRUE}
+# connected=TRUE
+mean_distance(air,directed = TRUE)
+# How the function works
+freq=distance_table(air)$res/sum(distance_table(air)$res)
+sum(freq*1:9)
+
+#connected=FALSE
+mean_distance(air,directed = TRUE,unconnected = FALSE)
+#How the function works
+freq=c(distance_table(air)$res,distance_table(air)$unconnected)/sum(c(distance_table(air)$res,distance_table(air)$unconnected))
+sum(freq*c(1:9,vcount(air)))
+```
+
+
+## Diameter
+
+diameter: The largest distance of a graph. In the special case when some vertices are not reachable via a path from some others, returns the longest finite distance.
+
+```{r,echo=TRUE}
+diameter(air)
+diameter(air,weights = E(air)$Distance)
+diameter(air,directed = FALSE)
+#can also specify the unconnected=TRUE/FALSE
+```
+
+## Get the nodes and edges of the airports in the longest path
+
+```{r,echo=TRUE}
+#get the nodes
+get_diameter(air,weights = E(air)$Distance)
+dia_v=get_diameter(air,weights = E(air)$Distance)
+# information of nodes
+dia_v[[]]
+# edges
+E(air,path = dia_v)
+# info of edges
+dia_e=E(air,path = dia_v)
+dia_e[[]]
+
+## delete the flight with passengers <= 10 then recalculate the diameter
+
+air_filt=delete_edges(air,E(air)[Passengers<=10])
+get_diameter(air_filt,weights = E(air_filt)$Distance)
+
+```
+
+## Color the paths along the diameter
+
+First step is to select the edges along the path. 
+
+Then just change the edge attribute.
+
+```{r,echo=TRUE}
+dia_vk=get_diameter(karate,directed = FALSE)
+ecol=rep("gray80",ecount(karate))
+ecol[E(karate,path = dia_vk)]="orange"
+plot(karate,edge.color=ecol)
+```
+
+
+# Components
+
+## Components
+
+For an undirected graph,
+
+Connected: if there is a path from any vertex to any other.
+
+Unconnected: if not connected. An unconnected graph has multiple components.
+
+Components: a maximal induced subgraph that is connected.
+
+```{r,echo=TRUE}
+is_connected(air)
+count_components(air)
+#no:number of components
+names(igraph::components(air))
+igraph::components(air)$csize
+igraph::components(air)$membership[igraph::components(air)$membership==6]
+# check whether RDU is in the largest component
+subcomponent(air,"RDU") #not bad
+```
+
+## strongly connected and weakly connected
+
+For a directed network,
+
+weakly connected: its corresponding undirected network that ignored edge directions, is connected
+
+strongly connected: if and only if it has a directed path from each vertex to all other vertices.
+
+```{r,echo=TRUE}
+is_connected(air,mode = "weak")
+is_connected(air,mode = "strong")
+count_components(air,mode = "strong")
+igraph::components(air,mode = "strong")$membership%>%table()
+# check whether RDU is in the largest component
+"RDU"%in%(igraph::components(air,mode = "strong")$membership[igraph::components(air,mode = "strong")$membership==25]%>%names()) # not bad
+```
+
+## Transitivity and reciprocity 
+
+Network and node properties 
+
+## Reciprocity
+
+The proportion of reciprocated ties for a directed network
+
+```{r,echo=TRUE}
+#number of reciprocity edges divided by number of edges
+reciprocity(air)
+2*dyad_census(air)$mut/ecount(air) 
+# number of mutual pairs divided by number of connected pairs
+reciprocity(air,mode = "ratio")
+dyad_census(air)$mut/(dyad_census(air)$mut+dyad_census(air)$asym)
+
+#number of pairs
+dyad_census(air)
+```
+
+## transitivity
+
+global: ratio of triangles to connected triples.
+
+local: ratio of triangles to connected triples each vertex is part of.
+
+```{r,echo=TRUE}
+transitivity(air,type = "global")
+transitivity(air,type = "local")[1:5]
+transitivity(air,vids = c("RDU","JFK"),type = "local") # specify multiple vertices
+
+#corresponds to different types of triples
+triad_census(air)
+
+?triad_census
+```
+
+
+## maximum flows and minimum cuts
+
+max flow How many passengers the US airport network can transport from a given airport to another one.
+
+```{r,echo=TRUE}
+E(air)[["BOS"%->%"JFK"]]
+# use seat to present the capacity.
+max_flow(air,"BOS","JFK",capacity = E(air)$Seats)$value
+#capacity is for max_flow() function as default
+E(air)$capacity=E(air)$Seats
+max_flow(air,"BOS","JFK")$value
+
+```
+
+## maximum flows and minimum cuts
+
+min cut: the minimum **number of edges**, that disconnect a destination vertex from a departure vertex. In a **weighted** network with edge capacities the minimum cut calculates the **total capacity** needed to disconnect the vertex pair.
+
+```{r,echo=TRUE}
+E(air)[["BOS"%->%"JFK"]]
+# use seat to present the capacity.
+min_cut(air,"BOS","JFK",capacity = E(air)$Seats)
+#capacity is for max_flow() function as default
+E(air)$capacity=E(air)$Seats
+min_cut(air,"BOS","JFK")
+
+```
+
+## maximum flows and minimum cuts
+
+max-flow min-cut theorem: the minimum cut in a graph from a source vertex to a target vertex always **equals** the maximum flow between the same vertices.
+
+```{r,echo=TRUE}
+min_cut(air,"BOS","JFK",capacity = E(air)$Seats)
+max_flow(air,"BOS","JFK",capacity = E(air)$Seats)$value
+```
+
+# Community
+
+## Make clusters
+
+You can speicfy the cluster as you want.
+
+```{r,echo=TRUE}
+data("karate")
+
+#ground truth
+V(karate)$Faction
+ground_truth=make_clusters(karate,V(karate)$Faction)
+ground_truth
+
+#cluster by the distance
+dist_memb=karate %>%
+distances(v = c("John A", "Mr Hi")) %>% 
+  apply(2, which.min) %>%
+make_clusters(graph = karate)
+
+```
+
+## Community detection
+
+Different algorithm for community detection (clustering)
+
+## Girvan-Newman algorithm 
+
+Girvan-Newman algorithm (edge betweenness method): the number of shortest paths passing through an intra-community edge should be low while inter-community edges are likely to act as bottlenecks that participate in many shortest paths between vertices of different communities.
+
+```{r,echo=TRUE}
+dendrogram <- cluster_edge_betweenness(karate)
+dendrogram
+plot_dendrogram(dendrogram) # for hierarchical structure
+membership(dendrogram) # best cut in terms of modularity
+cut_at(dendrogram,no = 2) # cut into two groups
+V(karate)[Faction == 1]$shape <- "circle"
+V(karate)[Faction == 2]$shape <- "square"
+set.seed(1)
+plot(dendrogram,karate)
+```
+
+## Exact modularity maximization
+
+Exact modularity maximization: optimization problem to maximum the modularity
+
+```{r,echo=TRUE}
+optimal=cluster_optimal(karate)
+set.seed(1)
+plot(optimal,karate)
+optimal_lg=cluster_fast_greedy(karate)
+set.seed(1)
+plot(optimal,karate)
+```
+
+## Leading eigenvector
+
+```{r,echo=TRUE}
+eigen=cluster_leading_eigen(karate)
+set.seed(1)
+plot(eigen,karate)
+clusters <- cluster_leading_eigen(karate, steps = 1) #at most two cluster
+
+
+```
+
+## Label propagation algorithm: 
+
+The algorithm terminates when it holds for each node that it belongs to a community to which a maximum number of its neighbors also belong.
+
+`fixed`: TRUE-label will not change.
+`initial`: initial point.
+
+```{r,echo=TRUE}
+
+#non-negative values: different labels; negative values: no labels
+initial=rep(-1,vcount(karate))
+fixed=rep(FALSE,vcount(karate))
+#need to have names
+names(initial)=names(fixed)=V(karate)$name 
+initial['Mr Hi']=1
+initial['John A']=2
+fixed['Mr Hi']=fixed['John A']=TRUE
+lab=cluster_label_prop(karate,initial = initial,fixed = fixed)
+set.seed(1)
+plot(lab,karate)
+set.seed(1)
+plot(ground_truth,karate)
+```
+
+
+## Other algorithms:
+
+`cluster_spinglass`
+
+...
+
+# Visualization 
+
+## Visulization 
+
+- color the paths
+- plotting clusters
+- plotting dendrograms
+- marked several grouping vertices
+
+`plot` support `igraph` and other igraph objects such as `vertexclustering`, `vertexdendrogram`, ... 
+
+
+## Plotting clusters
+
+`plot(vertexdendrogram,igraph)`
+
+```{r,echo=TRUE}
+set.seed(1)
+plot(ground_truth,karate)
+```
+
+
+## Plotting dendrograms
+
+`plot_dendrogram(vertexdendrogram)`
+
+Not flexible enough. Try `ggdendrogram()` in `ggplot2` package.
+
+```{r,echo=TRUE}
+set.seed(1)
+plot_dendrogram(dendrogram)
+#labels at the same height: hang=-1
+#cex: size of labels
+plot_dendrogram(dendrogram,hang = -1, cex = 0.6) 
+```
+
+## marked groups
+
+`plot`:
+
+- `mark.group`: list
+- `mark.col`: vector
+- `mark.border`: vector
+- `mark.shape`: vector (smoothness of the border, range from -1 to 1)
+- `mark.expand`: vector (size of the border)
+
+```{r,echo=TRUE}
+ls=list(`1`=ground_truth[[1]],`2`=ground_truth[[2]])
+ls
+# other pars can be set as default
+set.seed(1)
+plot(karate,mark.groups = ls)
+
+set.seed(1)
+plot(karate,mark.groups = ls,mark.col = c("lightblue","yellow"),mark.border = rainbow(length(ls),alpha=1),mark.shape=c(-0.5,1),mark.expand = 1:2)
+
+```
+
+# More about `igraph`
+
+## More about `igraph`
+
+- Epidemics on networks: compartmental models on netwoks
+- Spectral embeddings: community detection
+- Change-point detection in temporal graphs
+- CLustering multiple graphs
+- Cliques and graphlets
+- Graphons
+- Graph matching
+
