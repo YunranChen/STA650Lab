@@ -73,7 +73,7 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
 - Lab 4: Algorithm
   - Blitzstein and Diaconis sampling algorithm
     - Reference: https://projecteuclid.org/download/pdf_1/euclid.im/1318514519
-  - Github basics
+  - Using Git in Rstudio
 - Lab 5: ERGM (`statnet`)
   - ergm
   - ...
