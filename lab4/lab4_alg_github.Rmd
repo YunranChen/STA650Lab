@@ -1,0 +1,319 @@
+---
+title: "LAB4"
+author: "YunranChen"
+date: "02/05/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+- Blitzstein and Diaconis sampling algorithm
+  - Paper: <https://projecteuclid.org/download/pdf_1/euclid.im/1318514519>
+- Brief introduction for Github
+  - Git with R: <https://happygitwithr.com>
+  - Resources to learn Git: <https://try.github.io>
+
+
+# Sampling algorithm
+
+## Blitzstein and Diaconis sampling algorithm
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab4/alg.png")
+```
+
+## `graph.deg.gen`
+
+```{r,echo=TRUE, eval=FALSE}
+graph.deg.gen <- function(d){
+  # graphical.check: check whether such sequence exists
+  if(graphical.check(d)!="graphical")return("not a graphical sequence")
+  return(E)  # return a random graph generated with give degree sequence
+}
+```
+
+---
+
+```{r,echo=TRUE,eval=FALSE}
+graph.deg.gen <- function(d){
+  #Step1:-------------------------------------------------------------
+	N <- length(d) # # of nodes
+	# check whether such sequence exist
+	if(graphical.check(d)!="graphical")return("not a graphical sequence")
+	# create an empty matrix with 2 columns; store E in matrix
+	E <- matrix(ncol=2,nrow=0) 
+	prob_track <- 0 # track the probability 
+	equiv_track <- 0
+	#Step2:---------------------------------------------------------------
+	while(any(d>0)){
+	  #Step3:--------------------------------------------------------------
+		wh <- which(d>0) # return the index of nodes with positive degree
+		i <- wh[which.min(d[wh])] # the least i with a min positive entry
+		equiv_track <- equiv_track + lfactorial(d[i]) #  sum (log (d[i]!))
+		#Step4:--------------------------------------------------------------
+		while(d[i]>0){ # for node i with positive degree
+			i.edge.loc <- which(E==i,arr.ind=TRUE) # the index (location) of node i
+			i.edges <- NULL
+			if(is.matrix(i.edge.loc))i.edges <- E[i.edge.loc[,1],][E[i.edge.loc[,1],]!=i] #extract index of j {j \neq i in E}
+			J <- (1:N)[-unique(c(which(d==0),i,i.edges))] # All/{isolated nodes(not graphical),j=i,{i,j}\in E}
+			dropJ <- NULL
+			#Check \Theta_{i,j}d is graphical or not; if not, keep these indexes in dropJ
+			for(j in 1:length(J)){
+				tmp <- d; tmp[c(i,J[j])] <- tmp[c(i,J[j])] - 1
+				if(graphical.check(tmp)!="graphical")dropJ <- c(dropJ,j)
+			}
+			if(length(dropJ)>0)J <- J[-dropJ] #drop j that \Theta_{i,j}d is not graphical
+			#Step5:---------------------------------------------------------------
+			j <- J
+			if(length(J)>1){j <- sample(J,1,prob=d[J]); prob_track <- prob_track + log(d[j]/sum(d[J]))}
+			#Step6:----------------------------------------------------------------
+			E <- rbind(E,c(i,j))
+			d[c(i,j)] <- d[c(i,j)]-1
+		}
+	}	
+	list(E=E,prob=prob_track,equiv = equiv_track,unif.weight = -prob_track -equiv_track)
+}
+```
+
+## `graphical.check`
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab4/definition.png")
+```
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab4/hh.png")
+```
+
+```{r,echo=TRUE,eval=FALSE}
+###function to check graphicality
+graphical.check <- function(d){
+  ##implementation of the Havel-Hakimi check  
+  
+  #write your own function here
+}
+```
+
+---
+
+```{r,echo=TRUE}
+###function to check graphicality
+graphical.check <- function(d){
+##implementation of the Havel-Hakimi check
+	if(all(d==0))return("graphical")
+  #d have at least d_i positive entries other than at i
+	if(sum(d!=0)<max(d)-1)return("not graphical 2")
+  #reorder d to facilitate the calculation later
+	order_d <- sort(d,decreasing=TRUE)
+	recurse <- TRUE
+	ct <- 1
+	while(recurse){
+		tmp <- order_d[ct] #begin with the node with highest degree
+		order_d[ct] <- 0  # delete the node with highest degree
+		wh <- which(order_d>0) # index of nodes with positive degree
+		#highest degree should have at least d_i nodes connected to it
+		if(length(wh)<tmp)return("not graphical 3") 
+		order_d[wh[1:tmp]] <- order_d[wh[1:tmp]] - 1 
+		if(sum(order_d)==0)return("graphical")
+		# reorder and select the "new" node with highest degree
+		order_d <- sort(order_d,decreasing=TRUE)
+		ct <- which(order_d>0)[1] 
+	}
+}
+```
+
+```{r,echo=TRUE,include=FALSE}
+graph.deg.gen <- function(d){
+  #Step1:-------------------------------------------------------------
+	N <- length(d) # # of nodes
+	# check whether such sequence exist
+	if(graphical.check(d)!="graphical")return("not a graphical sequence")
+	# create an empty matrix with 2 columns; store E in matrix
+	E <- matrix(ncol=2,nrow=0) 
+	prob_track <- 0 # track the probability 
+	equiv_track <- 0
+	#Step2:---------------------------------------------------------------
+	while(any(d>0)){
+	  #Step3:--------------------------------------------------------------
+		wh <- which(d>0) # return the index of nodes with positive degree
+		i <- wh[which.min(d[wh])] # the least i with a min positive entry
+		equiv_track <- equiv_track + lfactorial(d[i]) #  sum (log (d[i]!))
+		#Step4:--------------------------------------------------------------
+		while(d[i]>0){ # for node i with positive degree
+			i.edge.loc <- which(E==i,arr.ind=TRUE) # the index (location) of node i
+			i.edges <- NULL
+			if(is.matrix(i.edge.loc))i.edges <- E[i.edge.loc[,1],][E[i.edge.loc[,1],]!=i] #extract index of j {j \neq i in E}
+			J <- (1:N)[-unique(c(which(d==0),i,i.edges))] # All/{isolated nodes(not graphical),j=i,{i,j}\in E}
+			dropJ <- NULL
+			#Check \Theta_{i,j}d is graphical or not; if not, keep these indexes in dropJ
+			for(j in 1:length(J)){
+				tmp <- d; tmp[c(i,J[j])] <- tmp[c(i,J[j])] - 1
+				if(graphical.check(tmp)!="graphical")dropJ <- c(dropJ,j)
+			}
+			if(length(dropJ)>0)J <- J[-dropJ] #drop j that \Theta_{i,j}d is not graphical
+			#Step5:---------------------------------------------------------------
+			j <- J
+			if(length(J)>1){j <- sample(J,1,prob=d[J]); prob_track <- prob_track + log(d[j]/sum(d[J]))}
+			#Step6:----------------------------------------------------------------
+			E <- rbind(E,c(i,j))
+			d[c(i,j)] <- d[c(i,j)]-1
+		}
+	}	
+	list(E=E,prob=prob_track,equiv = equiv_track,unif.weight = -prob_track -equiv_track)
+}
+
+```
+
+## Examples
+
+
+```{r,echo=TRUE}
+graph.deg.gen.test <- function(d){
+  #Step1:-------------------------------------------------------------
+	N <- length(d) # # of nodes
+	# check whether such sequence exist
+	if(graphical.check(d)!="graphical")return("not a graphical sequence")
+	# create an empty matrix with 2 columns; store E in matrix
+	E <- matrix(ncol=2,nrow=0) 
+	prob_track <- 0 # track the probability 
+	equiv_track <- 0
+	#Step2:---------------------------------------------------------------
+	while(any(d>0)){
+	  #Step3:--------------------------------------------------------------
+		wh <- which(d>0) # return the index of nodes with positive degree
+		i <- wh[which.min(d[wh])] # the least i with a min positive entry
+		equiv_track <- equiv_track + lfactorial(d[i]) #  sum (log (d[i]!))
+		#Step4:--------------------------------------------------------------
+		while(d[i]>0){ # for node i with positive degree
+			i.edge.loc <- which(E==i,arr.ind=TRUE) # the index (location) of node i
+			i.edges <- NULL
+			if(is.matrix(i.edge.loc))i.edges <- E[i.edge.loc[,1],][E[i.edge.loc[,1],]!=i] #extract index of j {j \neq i in E}
+			J <- (1:N)[-unique(c(which(d==0),i,i.edges))] # All/{isolated nodes(not graphical),j=i,{i,j}\in E}
+			dropJ <- NULL
+			#Check \Theta_{i,j}d is graphical or not; if not, keep these indexes in dropJ
+			for(j in 1:length(J)){
+				tmp <- d; tmp[c(i,J[j])] <- tmp[c(i,J[j])] - 1
+				if(graphical.check(tmp)!="graphical")dropJ <- c(dropJ,j)
+			}
+			if(length(dropJ)>0)J <- J[-dropJ] #drop j that \Theta_{i,j}d is not graphical
+			#Step5:---------------------------------------------------------------
+			j <- J
+			if(length(J)>1){j <- sample(J,1,prob=d[J]); prob_track <- prob_track + log(d[j]/sum(d[J]))}
+			#Step6:----------------------------------------------------------------
+			E <- rbind(E,c(i,j))
+			d[c(i,j)] <- d[c(i,j)]-1
+			##############
+			print(d)
+			##############
+		}
+	}	
+	list(E=E,prob=prob_track,equiv = equiv_track,unif.weight = -prob_track -equiv_track)
+}
+```
+
+---
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab4/test.png")
+```
+
+
+```{r,echo=TRUE}
+d=c(3,2, 2, 2, 1)
+abc=graph.deg.gen.test(d)
+```
+
+---
+
+
+```{r,eval=FALSE, include=FALSE,echo=FALSE}
+##count number of graphs 
+tmp <- NULL
+S <- 1000
+library("igraphdata")
+data("karate")
+d <- degree(karate)
+d
+# d <- rep(3,14)
+# d <- c(5,6,rep(1,11))
+for(i in 1:S){
+	tmp2 <- graph.deg.gen(d) # generate S graphs with 
+	tmp <- c(tmp,tmp2$unif.weight)
+	#cat("\r",i/S)
+}
+mm <- mean(exp(tmp))
+ss <- sd(exp(tmp))/sqrt(S)
+ss/mm
+
+```
+
+# Github
+
+## Brief introduction 
+
+- Using Git in R. (Provide commandline)
+- Fork, clone, commit, push, pull. 
+  - How do I track my local file and remote file ?
+- Keep with the updated upstream
+  - I forked a repo. And I take notes on the local files. The repo is updated every week. How should I merge all the changes without losing anything?
+  
+## Preparation
+
+- Make sure you install R, Rstudio and Git. <https://happygitwithr.com/install-git.html>
+
+## Create Rproject from Git
+
+In Github page: **fork** or **create your own repo**.
+
+In Rstudio:
+
+```{bash, eval=FALSE,echo=TRUE}
+
+Create New Project -> Version Control -> From Git
+
+```
+
+## open the Rproject to keep Git working
+
+Make sure you open the Rproject instead of files in the repo. So that you could keep everything in track.
+
+## Fork, clone, commit, push, pull. 
+
+In Rstudio, click the panel Git.
+
+In Terminal,
+
+```{bash, eval=FALSE,echo=TRUE}
+git clone 
+git status
+git add -A # add all changes
+git commit -m "blah"
+git push
+```
+
+## Upstream
+
+```{bash, eval=FALSE,echo=TRUE}
+git remote -v
+git remote add upstream https://github.com/OWNER/REPO.git
+git remote -v
+git pull upstream master
+git push
+```
+
+
