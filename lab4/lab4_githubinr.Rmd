@@ -1,0 +1,110 @@
+---
+title: "LAB4"
+author: "YunranChen"
+date: "02/05/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Brief introduction 
+
+- What is Git? -> Version control system
+- Keep track of local changes and remote changes.
+    - Get repo from remote: **clone** (first time)
+    - Make changes and push to remote: **commit**, **push**
+    - Get the latest updated version from remote: **pull**
+- Keep track of others and merge your changes and others' changes
+    - If I want to get the latest materials of 650 lab: **pull**
+    - If you want to make changes on 650 lab: Permission denied. -> **fork**
+    - Make changes and push to remote in your repo:  **commit**, **push**
+    - Keep the updated version from others' repo and keep your own changes: set a branch and merge the branch -> **remote add**,**pull**
+    
+  
+## Preparation
+
+- Make sure you install R, Rstudio and Git. <https://happygitwithr.com/install-git.html>
+
+## Create Rproject from Git
+
+In Github page: **create your own repo** or **fork from others' repo** (when you do not have the permission to make changes)
+
+In Rstudio:
+
+```{bash, eval=FALSE,echo=TRUE}
+
+Create New Project -> Version Control -> From Git
+
+```
+
+## open the Rproject to keep Git working
+
+Make sure you open the Rproject instead of files in the repo. So that you could keep everything in track.
+
+## Fork, clone, commit, push, pull. 
+
+In Rstudio, click the panel Git.
+
+In Terminal,
+
+```{bash, eval=FALSE,echo=TRUE}
+git clone 
+git status
+git add -A # add all changes
+git commit -m "blah"
+git push
+```
+
+## Set upstream branch and merge two branches
+
+```{bash, eval=FALSE,echo=TRUE}
+git remote -v
+git remote add upstream https://github.com/OWNER/REPO.git
+git remote -v
+git pull upstream master
+git push
+```
+
+## Example
+
+For the first time,
+
+```{bash, eval=FALSE,echo=TRUE}
+Fork from https://github.com/OWNER/REPO.git
+git clone https://github.com/YOURACCOUNT/REPO.git
+git remote -v
+git remote add upstream https://github.com/OWNER/REPO.git
+git remote -v
+```
+
+Make local changes and push to remote
+
+```{bash, eval=FALSE,echo=TRUE}
+git clone 
+git status
+git add -A # add all changes
+git commit -m "blah"
+git push
+```
+
+Keep the updated version of other's repo
+
+After `git pull upstream master`, `i` -> INSERT COMMENTS -> `Esc` -> Shift + zz. (Edit the commit file and then exit.)
+
+```{bash, eval=FALSE,echo=TRUE}
+git pull upstream master
+git push
+```
