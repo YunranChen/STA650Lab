@@ -1,21 +1,3 @@
-##count number of graphs 
-tmp <- NULL
-S <- 1000
-d <- degree(karate)
-# d <- rep(3,14)
-# d <- c(5,6,rep(1,11))
-for(i in 1:S){
-	tmp2 <- graph.deg.gen(d)
-	tmp <- c(tmp,tmp2$unif.weight)
-	cat("\r",i/S)
-}
-mm <- mean(exp(tmp))
-ss <- sd(exp(tmp))/sqrt(S)
-ss/mm
-
-
-
-
 
 ###algorithm 1 from Blitzstein and Diaconis
 
