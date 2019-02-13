@@ -75,10 +75,13 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Reference: https://projecteuclid.org/download/pdf_1/euclid.im/1318514519
   - Using Git in Rstudio
 - Lab 5: ERGM (`statnet`)
-  - ergm
-  - ...
+  - `summary` network statistics
+  - `ergm` model fitting and interpretation:
+  - `simulate` network simulations based on specified model.
+  - `got`, `mcmc.diagnostics`: Goodness of fit and MCMC diagnostics
   - References:
-    - Tutorial: https://statnet.csde.washington.edu/trac/raw-attachment/wiki/Sunbelt2014/introToSNAinR-handout.pdf 
+    - Tutorial: https://statnet.org/trac/raw-attachment/wiki/Sunbelt2016/ergm_tutorial.html
+    - Handbook: http://statnet.org/
 - Lab 6: Collect network data and API requests
   - Several useful websites: SNAP
   - twitteR API request
