@@ -1,0 +1,460 @@
+---
+title: "LAB5"
+author: "YunranChen"
+date: "2/14/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+R package `statnet` : focus on package `ergm`
+
+- `summary` network statistics
+
+- `ergm` model fitting and interpretation:
+    
+- `simulate` network simulations based on specified model.
+
+- `gof`, `mcmc.diagnostics`: Goodness of fit and MCMC diagnostics
+
+
+## `statnet`
+
+The analytic framework is based on **Exponential family Random Graph Models (ergm)**.
+
+**statnet** provides a comprehensive framework for **ergm-based** network modeling, including tools for:
+
+- model estimation 
+
+- model-based network simulation 
+
+- network visualization 
+
+- model evaluation 
+
+Powered by **Markov chain Monte Carlo (MCMC)** algorithm.
+
+
+## `statnet`
+
+- Official website (handbook): <http://statnet.org/>
+
+- Tutorial: <https://statnet.org/trac/raw-attachment/wiki/Sunbelt2016/ergm_tutorial.html>
+
+- **Explore the official websites to find more info**
+
+## Preparation
+
+```{r install, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("statnet")
+library(statnet)
+library(dplyr)
+```
+
+# `summary` the network statistics
+
+## Dataset
+
+florentine: Florentine Family Marriage and Business Ties Data
+
+```{r,echo=TRUE}
+data(package="ergm") #see all available dataset in the package
+data(florentine) # load flomarriage and flobusiness data
+flomarriage # see the details of the network
+class(flomarriage)
+summary(flomarriage)
+set.seed(1)
+plot(flomarriage)
+```
+
+## `summary`
+
+`summary(network-object~ergm-terms)`: provide the statistics of network
+
+```{r,echo=TRUE}
+summary(flomarriage~edges+triangle+kstar(1:3)+degree(0:5))
+```
+
+## directed networks
+
+```{r,echo=TRUE}
+data(samplk)
+samplk3
+set.seed(1)
+plot(samplk3)
+```
+
+## directed networks
+
+`idegree` and `odegree`.
+
+```{r,echo=TRUE}
+summary(samplk3~idegree(1:3)+odegree(c(2,4))) #indegree and outdegree
+
+```
+
+# `ergm` fit ergm model
+
+## ERGM
+
+The general form:
+$P(g=G)=\frac{exp(\theta'T(G))}{c(\theta)}$
+
+log-odds of a single edge between node $i$ and $j$:
+$logit(Y)=\theta'T(G)$
+
+Similar as regression:
+
+`glm(y~x)` -- `ergm(graph~terms)` where `terms` are $T(\cdot)$
+
+
+
+## `ergm` function. 
+
+- Input: formula [netowrk object (adjacency matrix)] ~ [ergm-terms]
+
+
+```{r,echo=TRUE}
+#Input
+?ergm
+class(flomarriage)
+ergm(flomarriage~edges)%>%summary()
+mat=as.sociomatrix(flomarriage)
+ergm(mat~edges)%>%summary()
+```
+
+## `ergm` function. 
+
+- Output: ergm object
+
+- Method on ergm object:
+
+    - class
+    - names
+    - **summary**
+    - coef
+    - coefficients
+    - vcov
+    
+```{r,echo=TRUE}
+flomodel.01=ergm(flomarriage~edges)
+summary(flomodel.01)
+class(flomodel.01)
+names(flomodel.01)
+flomodel.01$coef
+
+coef(flomodel.01)
+coefficients(flomodel.01)
+vcov(flomodel.01) #variance-covariance matrix of the main parameters
+vcov(flomodel.01)%>%sqrt()
+vcov(ergm(flomarriage~edges+triangle))
+
+```
+
+## Erdos-Renyi model G(n,p) model: include `edges` term
+
+Edge included in the graph with prob $p$: $Pr(A=a|p)=\prod p^{a_{ij}}(1-p)^{1-a_{ij}}$
+
+Rewrite Erdos-Renyi model in ERGM form: $T(G)=\#edges$, $\theta=log \frac{p}{1-p}$
+
+
+## Interpretation of the parameter
+
+Interpretation (similar when you interpret glm): 
+
+- `edges`: If the number of edges increase 1, the log-odds of any edge existing is -1.6094.
+
+- $p<\alpha$: parameter does not equal to 0 significantly,
+
+- Null Deviance: The null deviance in the ergm 
+output appears to be based on an Erdos-Renyi random graph with p = 0.5.
+
+- Residual Deviance: 2 times difference of loglik (saturated model - our model) (smaller is better)
+
+- AIC, BIC: -loglik+penalty(#parameter)
+
+
+```{r,echo=TRUE}
+flomodel.01=ergm(flomarriage~edges) #similar as regression lm(y~x)
+summary(flomodel.01) 
+
+flomodel.01$coef/(1+exp(flomodel.01$coef)) # prob of an edge exists
+-2*(flomodel.01$mle.lik)+2 #AIC: -2loglik+2k
+-2*(flomodel.01$mle.lik)+log(16*15/2) #BIC:-2loglik+klog(n)
+pchisq(108.1 , df=119, lower.tail=FALSE) # H0: our model fits well. The smaller the better. Accept H0.
+```
+
+
+## Include `triangle` terms
+
+Include **number of triangles** as a measure of **clustering**.
+
+```{r,echo=TRUE}
+flomodel.02=ergm(flomarriage~edges+triangle)
+summary(flomodel.02)
+```
+
+- Coefficients: -1.6744$\times$#of edges+0.1497$\times$#of triangles
+
+- `triangle` is not significant
+
+- AIC, BIC: larger than that of ER model
+
+## Include nodal covariates: `nodecov`
+
+Using `nodecov` to include continuous nodal covariates
+
+```{r,echo=TRUE}
+flomarriage
+wealth=flomarriage %v% 'wealth' # %v% get the vertex attributes
+set.seed(1)
+plot(flomarriage, vertex.cex=wealth/25, main="Florentine marriage by wealth", cex.main=0.8)
+```
+
+```{r,echo=TRUE}
+flomodel.03=ergm(flomarriage~edges+nodecov('wealth'))
+summary(flomodel.03)
+```
+
+Interpretation: -2.594929 # of edges + 0.010546 wealth of node i + 0.010546 wealth of node j
+
+## Include transformation of continuous nodal covariates
+
+```{r,echo=TRUE}
+flomodel.04=ergm(flomarriage~edges+absdiff("wealth"))
+summary(flomodel.04)
+```
+
+
+## Include transformation of continuous nodal covariates
+
+```{r,echo=TRUE}
+flomodel.05=ergm(flomarriage~edges+nodecov('wealth')+nodecov('wealth',transform=function(x) x^2))
+summary(flomodel.05)
+```
+
+## Include other possible `ergm-terms`
+
+```{r,echo=TRUE}
+flomodel.06=ergm(flomarriage~kstar(1:2) + absdiff("wealth"))
+summary(flomodel.06)
+summary(ergm(flomarriage~kstar(c(1,3)) + absdiff("wealth")))
+```
+
+
+
+## Include categorical nodal covariates: `nodefactor`
+
+```{r,echo=TRUE}
+data("faux.mesa.high")
+mesa=faux.mesa.high
+mesa # grade, race, sex are discrete vertex attribute
+plot(mesa, vertex.col='Grade')
+legend('bottomleft',fill=7:12,legend=paste('Grade',7:12),cex=0.75)
+```
+
+## Include discrete nodal covariates: `nodefactor`
+
+```{r,echo=TRUE}
+fauxmodel.01=ergm(mesa ~edges + nodecov('Grade'))
+summary(fauxmodel.01)
+fauxmodel.02=ergm(mesa ~edges + nodefactor('Grade'))
+summary(fauxmodel.02)
+```
+
+## Include other terms: eg. `homophily`
+
+```{r,echo=TRUE}
+help('ergm-terms') # check all the possible ergm terms
+```
+
+## Include other terms: eg. `homophily`
+
+`nodematch`: Uniform homophily and differential homophily
+
+uniform homophily(diff=FALSE), adds **one** network statistic to the model, which counts the number of edges (i,j) for which attrname(i)==attrname(j). 
+
+differential homophily(diff=TRUE), **p**(#of unique values of the attrname attribute) network statistics are added to the model. 
+
+The kth such statistic counts the number of edges (i,j) for which attrname(i) == attrname(j) == value(k), where value(k) is the kth smallest unique value of the attrname attribute.  
+
+When multiple attribute names are given, the statistic counts only ties for which all of the attributes match. 
+
+
+```{r,echo=TRUE}
+?nodematch
+fauxmodel.03 <- ergm(mesa ~edges + nodematch('Grade',diff=F) )
+summary(fauxmodel.03)
+mixingmatrix(mesa, "Race") # reason for Inf
+fauxmodel.04 <- ergm(mesa ~edges + nodematch('Grade',diff=T) )
+summary(fauxmodel.04)
+fauxmodel.04 <- ergm(mesa ~edges + nodematch('Grade',diff=T,keep=c(2,4)) )
+summary(fauxmodel.04)
+fauxmodel.05 <- ergm(mesa ~edges + nodematch('Grade',diff=T)+ nodematch('Race',diff=T) )
+summary(fauxmodel.05)
+mixingmatrix(mesa,"Race")
+```
+
+## directed network
+
+```{r,echo=TRUE}
+samplk3
+set.seed(1)
+plot(samplk3)
+```
+
+## Include `mutual` 
+
+```{r,echo=TRUE}
+sampmodel.01 <- ergm(samplk3~edges+mutual)
+summary(sampmodel.01)
+```
+
+Strong mutual effect.
+
+## Include `sender`, `receiver`, `mutual`
+
+p1 model
+
+```{r,echo=TRUE}
+sampmodel.02 <- ergm(samplk3~ edges + sender + receiver + mutual)
+summary(sampmodel.02)
+degree(samplk3,cmode = "indegree")
+```
+
+## Other `ergm-terms`
+
+Details of other `ergm-terms` see <https://www.jstatsoft.org/article/view/v024i04>.
+
+## Missing edges
+
+Make sure to set missing edges as `NA`: probability of an edge in the observed sample.
+
+```{r,echo=TRUE}
+missnet=flomarriage
+missnet[1,2]=missnet[2,4]=missnet[5,6]=NA # originally are 0
+summary(ergm(missnet~edges))
+summary(ergm(flomarriage~edges))
+
+#Set NA
+1/(1+exp(-(-1.5790)))
+20/(choose(16,2)-3)
+#Set 0
+1/(1+exp(-(-1.6094)))
+20/(choose(16,2))
+```
+
+
+# `simulate` netowrks from an ergm model fit
+
+## `simulate` netowrks from an ergm model fit
+
+The ergm model defines a probability distibution across all networks of this size(#nodes fixed).
+
+Use `simulate(ergm-model,nsim=n)` to get a list of networks
+
+Use `summary` and functions that can be used to a list
+
+```{r,echo=TRUE}
+summary(flomodel.04)
+flomodel.04.sim <- simulate(flomodel.04, nsim=10,seed = 1)
+class(flomodel.04.sim)
+summary(flomodel.04.sim)
+
+length(flomodel.04.sim)
+flomodel.04.sim[[4]]
+
+plot(flomodel.04.sim[[4]], label= flomodel.04.sim[[4]] %v% "vertex.names")
+flomarriage
+```
+
+## `simulate` netowrks from an ergm model fit
+
+- formula: Specify your own model
+
+- `basis`: initial network for MC
+
+- `control`: settings of MCMC
+
+```{r,echo=TRUE}
+basenet <- network(16,density=0.1,directed=FALSE)
+g.sim <- simulate(flomarriage ~ edges + kstar(2), nsim=1000, coef=c(-1.8,0.03),
+                  basis=basenet, control=control.simulate(MCMC.burnin=1000, MCMC.interval=10))
+# MCMC.interval: Number of proposals between sampled statistics. 
+length(g.sim)
+?simulate.ergm
+```
+
+## Check the goodness of fit
+
+- AIC,BIC; Deviance; 
+- Goodness of fit: `gof`
+- MCMC diagnostics: `mcmc.diagnostics`
+
+## `gof`
+
+`gof(model~model+degree+esp+distance)`
+
+Only four possible arguments for ergm-term:
+
+- `model`: all the terms included in the model
+- `degree`: degree (node level)
+- `esp`: edgwise share partners (edge level)
+- `distance`: geodesic distances (dyad level)
+
+Draw samples from the specified model, calculate the MC p-value based on the distribution generated by the samples.
+
+
+```{r,echo=TRUE}
+flo.04.gof.model=gof(flomodel.04~model+degree+esp+distance)
+flo.04.gof.model
+names(flo.04.gof.model)
+#95% confidence interval
+plot(flo.04.gof.model)
+```
+
+## `mcmc.diagnostics`
+
+Check the MCMC
+
+```{r,echo=TRUE}
+#install.packages("latticeExtra")
+
+fit <- ergm(flobusiness ~ edges+degree(1))
+mcmc.diagnostics(fit) #centered
+```
+
+## Interpretation on `mcmc.diagnostics`:
+
+Good example. 
+
+- Mixing well: MCMC sample statistics are varying randomly around the observed values at each step 
+- Bell-shaped centered at 0. The difference between the observed and simulated values of the sample statistics have a roughly bell-shaped distribution, centered at 0. 
+- Notice the sawtooth pattern is due to the discrete values. The sawtooth pattern visible on the degree term deviation plot is due to the combination of discrete values and small range in the statistics: the observed number of degree 1 nodes is 3, and only a few discrete values are produced by the simulations. 
+
+Bad example:
+
+```{r, out.width = "850px"}
+knitr::include_graphics("//Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab5/mcdiag.png")
+```
+
+## More functions
+
+```{r, out.width = "850px"}
+knitr::include_graphics("//Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab5/more.png")
+```
