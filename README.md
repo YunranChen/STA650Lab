@@ -83,8 +83,17 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Tutorial: https://statnet.org/trac/raw-attachment/wiki/Sunbelt2016/ergm_tutorial.html
     - Handbook: http://statnet.org/
 - Lab 6: Collect network data and API requests
-  - Several useful websites: SNAP
-  - twitteR API request
+  - Several useful websites: 
+    - Awesome website for papers, reviews, datasets and softwares: https://github.com/briatte/awesome-network-analysis
+    - Katherine’s webpage: http://kateto.net/2016/05/network-datasets/
+    - Data analysis competition: https://www.kaggle.com/datasets https://data.world/search?q=network+dataset
+  - twitter API request: `rtweet`
+    - Official website: https://rtweet.info/index.html
+    - API authorization; `create_token`
+    - `search_tweets`
+    - `stream_tweets`
+    - Other functions see official website
+    - Examples: retweet networks, friendship networks
 - Lab 7: API requests
   - Reddit API requests
   - IMDB API requests
