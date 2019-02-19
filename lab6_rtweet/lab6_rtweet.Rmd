@@ -1,0 +1,365 @@
+---
+title: "LAB6"
+author: "YunranChen"
+date: "2/19/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+**Dataset available on the web (awesome):**
+
+- <https://github.com/briatte/awesome-network-analysis> Papers, reviews, dataset, software (tutorial)
+- Katherine's webpage <http://kateto.net/2016/05/network-datasets/>
+- Kaggle <https://www.kaggle.com/datasets>
+- dataworld <https://data.world/search?q=network+dataset>
+
+
+**Web scraping:**
+
+- Web APIs(application programming interface): website offers a set of structured http requests that return JSON or XML files. `rtweet`,`twitteR`,`Rfacebook`
+- Screen scraping: extract data from source code of website, with html parser or regular expression matching. (lab 7)
+
+**Twitter API**
+
+## R package `rtweet`
+
+Official website: <https://rtweet.info/index.html>
+
+**Explore the official websites to find more info.**
+
+- All the functions
+- Tutorial
+- FAQ (possible issues)
+
+Good documentation; Recommended over another R package `twitteR`.
+
+## Preparation
+
+```{r install, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("rtweet")
+library("rtweet")
+```
+
+## API authorization
+
+Follow <https://rtweet.info/articles/auth.html>
+
+- Create a Twitter App
+
+- Authorization via access token:  `create_token()` automatically saves your token as an environment variable, you’ll be set for future sessions as well!
+
+```{r,echo=TRUE, eval=FALSE}
+#save your token as an environment variable for you
+create_token(
+  app = "your_research_app",
+  consumer_key = "consumer_API_key",
+  consumer_secret = "consumer_API_secret_key",
+  access_token = "access_token",
+  access_secret = "access_token_secret")
+```
+
+## `rtweet`
+
+**API request**
+
+- <https://developer.twitter.com/en/docs/tweets/search/api-reference/get-search-tweets>
+
+- Send a request specifying parameters; Get response in JSON format
+
+- `search_tweets`: **sampling** from tweets in past 7 days matching keywords (**specified # of tweets**)  -- recent/popular/mixed
+
+- `stream_tweets`: sampling/keyword-filter/user-track/geo-location **live stream** for future time period;(**specified time period**) 
+
+## `search_tweets`
+
+- limiting searches to 10 keywords and operators
+
+- only past 6-9 days of Tweets
+
+
+**Parameters:**
+
+`help()` or see <https://developer.twitter.com/en/docs/tweets/search/api-reference/get-search-tweets>
+
+- `q`: Query to be searched. Spaces/AND -- both ("data science";"data AND science"); OR -- either or (data OR science); '""' -- exact ('"data science"'; "\"data science\""); "#datascience" -- track hashtag; "@duke" -- track at.
+
+See operators: <https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html>
+
+- `n`: total number of desired tweets. At most 18,000 in a single call; For $>$ 18,000, `retryonratelimit`=TRUE
+
+- `type`: "recent","popular","mixed"
+
+- `include_rts`: whether to include retweets
+
+- `geocode`:  "latitude,longitude,radius" 
+
+- `lang`: language
+
+- `parse`: TRUE(dateframe); FALSE(list)
+
+```{r,echo=TRUE,cache=TRUE}
+rt <- search_tweets(
+  q="#dukebasketball", #Query to be searched
+  n = 10,
+include_rts=FALSE,
+result_type="recent",
+geocode = "36.00,-78.94,5mi"
+)
+rt
+
+rt <- search_tweets(
+  "trump OR president", n = 10,
+  lang = "en"
+)
+rt
+
+search_tweets(
+  q="#dukebasketball", #Query to be searched
+  n = 10,
+include_rts=FALSE,
+result_type="recent",
+geocode = "36.00,-78.94,5mi"
+)
+```
+
+## `search_tweets`
+
+- dataframe: each row a tweet
+
+- `users_data`: only extract user-related column
+
+- `ts_plot`
+
+- `lat_lng`
+
+
+```{r,echo=TRUE,cache=TRUE}
+## search for 18000 tweets using the rstats hashtag
+rt <- search_tweets(
+  "#dukebasketball", n = 50000, include_rts = FALSE,
+  geocode = "36.00,-78.94,2000mi"
+)
+rt_dmbb=rt
+class(rt)
+
+## preview tweets data
+names(rt)
+
+
+## preview users data
+users_data(rt)%>%names()
+
+## plot time series (if ggplot2 is installed)
+ts_plot(rt) #Duke vs No. 16 Louisville
+```
+
+## `search_tweets2`
+
+Search different queries independently. 
+
+Other parameters are the same.
+
+```{r,echo=TRUE,cache=TRUE}
+st2 <- search_tweets2(
+  c("\"data science\"", "rstats OR python"),
+  n = 50
+)
+st2$query
+names(st2)
+```
+
+## Visualization
+
+`research_tweets` returns a dataframe. Visualization based on the dataframe.
+
+- `ts_plot`: Creates a ggplot2 plot of the frequency of tweets over a specified interval of time. Using `ggplot2`; 
+
+- Map: Using `lat_lng`
+
+```{r,echo=TRUE}
+## plot time series of tweets
+ts_plot(rt_dmbb, "3 hours") + # a ggplot object
+  ggplot2::theme_minimal() + # Add multiple layers directly
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Frequency of #dukebasketball Twitter statuses from past 6-9 days",
+    subtitle = "Twitter status (tweet) counts aggregated using three-hour intervals",
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet"
+  )
+# an example using `groupby` with ggplot2
+ts_plot(rt_dmbb%>%dplyr::group_by(is_quote), "3 hours") + # a ggplot object
+  ggplot2::theme_minimal()
+```
+
+```{r,echo=TRUE}
+#install.packages("maps")
+## create lat/lng variables using all available tweet and profile geo-location data
+rt_dmbbll <- lat_lng(rt_dmbb)
+names(rt_dmbbll)[!names(rt_dmbbll)%in%names(rt_dmbb)]
+
+## plot state boundaries
+par(mar = c(0, 0, 0, 0))
+maps::map("state","north carolina", lwd = .25)
+
+## plot lat and lng points onto state map
+with(rt_dmbbll, points(lng, lat, pch = 20, cex = .75, col = rgb(0, .3, .7, .75)))
+```
+
+## `stream_tweets`
+
+<https://developer.twitter.com/en/docs/tweets/search/api-reference/get-search-tweets>
+
+- `q`
+
+    - Sampling a small random sample of all publicly available tweets `q=""`
+
+    - Filtering via a search-like query (up to 400 keywords) `q="duke,basketball"`. "," separation
+
+    - Tracking via vector of user ids (up to 5000 user_ids) `q="hillaryclinton,realdonaldtrump"`. "," separation
+
+    - Location via geo coordinates (1-360 degree location boxes) `q=c(-125, 26, -65, 49)`
+
+- `timeout` : amount of time (seconds) **occupy your r session**
+
+- `parse`: TRUE(dataframe); FALSE(JSON).
+
+- `file_name`: save as a file
+
+**Usually the file is large. Recommend to save as JSON file then parse to data.frame.**
+
+To ensure the stream automatically reconnects following any interruption prior to the specified stream time, use `stream_tweets2()`.
+
+```{r,echo=TRUE,cache=TRUE}
+## Randomly sample (approximately 1%) from the live stream of all tweets for 30 seconds (default)
+rt <- stream_tweets("")
+nrow(rt)
+
+rt <- stream_tweets("duke,bluedevil,unc")
+nrow(rt)
+rt
+## stream tweets for a day (60 secs x 60 mins * 24 hours )
+stream_tweets(
+  "abc,nbcnews,cbsnews,nytimes,bbcworld,bbcbreaking,bbcnews,bbcsport",
+  timeout = 60*2,
+  file_name = "tweetsth1.json",
+  parse = FALSE
+)
+
+## read in the data as a tidy tbl data frame
+djt1 <- parse_stream("tweetsth1.json")
+djt1
+```
+
+## Other functions
+
+<https://rtweet.info/reference/index.html>
+
+# Examples on creating networks
+
+## Preparation
+
+```{r,echo=TRUE}
+library(dplyr)
+library(igraph)
+library(purrr)
+```
+
+## Creating networks based on datasets
+
+Retweet networks
+
+directed: retweet
+
+Similarly, we can get quote networks, replying networks.
+
+```{r,echo=TRUE,cache=TRUE}
+rt_duke <- search_tweets(
+  "#duke", n = 1000
+)
+nrow(rt_duke)
+names(rt_duke)
+
+netdf=rt_duke%>%dplyr::select(.,screen_name,retweet_screen_name,is_retweet)
+netdfr=netdf%>%filter(is_retweet)%>%select(-is_retweet)
+netdfp=netdf%>%filter(!is_retweet)%>%pull(screen_name)
+igra_duke=graph_from_data_frame(netdfr)#+netdfp
+E(igra_duke)$weight=rep(1,ecount(igra_duke))
+igra_duke_s <- igraph::simplify( igra_duke, remove.multiple = T, remove.loops = F, 
+                 edge.attr.comb=c(weight="sum"))
+igra_duke_s
+plot(igra_duke_s,vertex.color="gold", vertex.size=log(degree(igra_duke_s))*3+1, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=log(degree(igra_duke_s))*0.2+0.1, vertex.label.dist=2, edge.curved=0.5,edge.arrow.size=.2)
+```
+
+Friendship networks
+
+directed: following
+
+`get_friends()`: Get user IDs of accounts followed by target user(s).
+
+```{r,echo=TRUE,cache=TRUE}
+rt_dukembb <- search_tweets(
+  "#dukebasketball", n = 1000
+)
+
+names(rt_dukembb)
+
+users=rt_dukembb$user_id%>%unique()
+
+##maximum ids: 100
+abc=get_friends(users[1:5],n=100,retryonratelimit = TRUE)
+abc%>%filter(user_id%in%users)
+
+```
+
+What if more than 100 ids?
+
+```{r,echo=TRUE,cache=TRUE,eval=FALSE}
+for (i in --){
+  mat=get_friends(users[--])%>%filter(user_id%in%users)
+  limit <- rate_limit("get_friends")
+  if (--){
+    Sys.sleep(--)
+  }
+}
+```
+
+## `rate_limit`
+
+<https://developer.twitter.com/en/docs/developer-utilities/rate-limit-status/api-reference/get-application-rate_limit_status>
+
+```{r,echo=TRUE}
+rate_limit()%>%head()
+rate_limit("get_friends")
+```
+
+```{r,echo=TRUE,cache=TRUE,eval=FALSE}
+for (i in --){
+  mat=get_friends(users[--])%>%filter(user_id%in%users)
+  limit <- rate_limit("get_friends")
+  if (limit$remaining==0){
+    Sys.sleep(60)
+  }
+}
+```
+
+
+
