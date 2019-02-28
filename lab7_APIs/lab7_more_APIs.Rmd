@@ -1,0 +1,300 @@
+---
+title: "LAB7"
+author: "YunranChen"
+date: "2/28/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+**Web APIs:**
+
+Web APIs (application programming interface): website offers a set of structured http requests that return JSON or XML files.
+
+- R packages: `rtweet` (twitter), `Rfacebook` (facebook), `RedditExtractoR` (reddit), `imdbapi` (IMDB), `omdbapi`(The Open Movie Database).
+
+- API request from R. `rjson` (map JSON file to datafram),`rvest` (web scrapping).
+
+
+**Twitter API**
+
+- Retweet networks
+- Friendship networks
+
+
+- API authorization
+- API request
+- Creating networks based on datasets (Retweet networks)
+- **Multiple requests based on results (Friendship networks)**
+
+
+## Preparation
+
+```{r install, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("rtweet")
+library("rtweet")
+library(dplyr)
+library(igraph)
+library(purrr)
+library("stringr")
+```
+
+## Retweet networks
+
+```{r,cache=TRUE,echo=TRUE}
+rt_duke <- search_tweets(
+  "#duke", n = 1000
+)
+nrow(rt_duke)
+names(rt_duke)
+
+netdf=rt_duke%>%dplyr::select(.,screen_name,retweet_screen_name,is_retweet)
+netdfr=netdf%>%filter(is_retweet)%>%select(-is_retweet)
+netdfp=netdf%>%filter(!is_retweet)%>%pull(screen_name)
+igra_duke=graph_from_data_frame(netdfr)#+netdfp
+E(igra_duke)$weight=rep(1,ecount(igra_duke))
+igra_duke_s <- igraph::simplify( igra_duke, remove.multiple = T, remove.loops = F, 
+                 edge.attr.comb=c(weight="sum"))
+igra_duke_s
+plot(igra_duke_s,vertex.color="gold", vertex.size=log(degree(igra_duke_s))*3+1, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=log(degree(igra_duke_s))*0.2+0.1, vertex.label.dist=2, edge.curved=0.5,edge.arrow.size=.2)
+```
+
+# Friendship networks
+
+## Friendship networks
+
+Friendship network of NYC political science
+
+directed: following
+
+`get_friends()`: Get user IDs of accounts followed by target user(s).
+
+```{r,echo=TRUE,cache=TRUE}
+##maximum ids: 100
+user.seed="drewconway"
+user.following=get_friends(user.seed,n=500,retryonratelimit = TRUE)
+nrow(user.following)
+user.following%>%head(5)
+
+```
+
+## filter on the following user list
+
+```{r,echo=TRUE,cache=TRUE}
+info.following=lookup_users(user.following$user_id)
+info.following
+names(info.following)
+##choose the filtering criterion: description, verified (blue check mark), location
+info.following%>%select(geo_coords,country,country_code,location)%>%lat_lng()
+## filter based on description
+candidates=info.following%>%filter(description%>%
+                          str_detect("nyu|new york university"),
+                        description%>%
+                          str_detect("poli(tics|tical|sci|cy)"))%>%
+  select(user_id,screen_name,name,friends_count,description)
+candidates%>%head(5)
+```
+
+## request rate limit
+
+`rate_limit`
+
+<https://developer.twitter.com/en/docs/developer-utilities/rate-limit-status/api-reference/get-application-rate_limit_status>
+
+
+```{r,echo=TRUE,cache=TRUE}
+rate_limit()%>%head()
+rate_limit("get_friends")
+get_friends(c("drewconway","BarackObama"))
+rate_limit("get_friends") # 15 every 15 min
+rate_limit("lookup_users") # 900 every 15 min
+```
+
+
+```{r,echo=TRUE,cache=TRUE,eval=FALSE}
+limit.fri=rate_limit("get_friends")
+  if (limit.fri$remaining==0){
+    Sys.sleep(60*as.numeric(limit.fri$reset))}
+```
+
+## Friendship network 
+
+```{r,echo=TRUE,cache=TRUE,eval=FALSE}
+# seed user
+user.seed= 20916144 #"cdsamii"
+user.following=get_friends(user.seed,n=15,retryonratelimit = TRUE)
+userid=c(user.seed,user.following$user_id)
+info.following=lookup_users(userid)
+user.df=info.following%>%filter(description%>%
+                          str_detect(regex("nyu|new york university",ignore_case = T)),
+                        description%>%
+                          str_detect(regex("poli(tics|tical|sci|cy)",ignore_case = T))
+                        )%>%
+  select(user_id,screen_name,name,friends_count,description)
+acc.id=user.df$user_id # qualified id
+nyc.id=user.seed # already scrapped the friends
+can.id=acc.id[!acc.id%in%nyc.id] # to be scrapped
+rej.id=userid[!info.following$user_id%in%acc.id] # non-qualified
+edge.list=user.following%>%filter(user_id%in%acc.id) # netowork
+info.id=userid # already request user info
+while((length(nyc.id)<100)){
+  # pick the first user in the acc.id
+user.following=get_friends(can.id,n=1000,retryonratelimit = TRUE)
+userid=user.following$user_id
+useridx=userid[!userid%in%info.id] # new userid
+info.following=lookup_users(useridx)
+user.dfx=info.following%>%filter(description%>%
+                          str_detect(regex("nyu|new york university",ignore_case = T)),
+                        description%>%
+                          str_detect(regex("poli(tics|tical|sci|cy)",ignore_case = T))
+                        )%>%
+  select(user_id,screen_name,name,friends_count,description)
+nyc.id=c(nyc.id,can.id)%>%unique() #already scrapped and in the list
+if(nrow(user.dfx)==0){break}
+user.df=rbind(user.df,user.dfx) #merge user info df
+can.id=user.dfx$user_id #to be scrapped
+rej.idx=useridx[!useridx%in%can.id] #not qualified
+rej.id=c(rej.id,rej.idx)%>%unique()
+acc.id=c(acc.id,can.id)%>%unique()
+info.id=c(info.id,useridx)%>%unique()
+edge.listx=user.following%>%filter(user_id%in%acc.id) #add edgelist
+edge.list=rbind(edge.list,edge.listx)
+}
+```
+
+## Draw the network
+
+```{r,echo=TRUE}
+load("friendship.rdata")
+edge.list%>%head(5)
+user.df%>%head(5)
+library(igraph)
+net=graph_from_data_frame(edge.list)
+netsim=igraph::simplify(net, remove.multiple = T, remove.loops = F)
+V(netsim)$id=V(netsim)$name
+
+user.df=user.df %>%
+  unique()%>%
+    arrange(match(user_id, V(netsim)$id))
+user.name=user.df%>%
+  pull(name)
+V(netsim)$name=user.name
+V(netsim)$degree=user.df$friends_count
+set.seed(123)
+plot(netsim,vertex.name=V(netsim)$user.name,vertex.color="gold", vertex.size=log(V(netsim)$degree)*.8+0.01, 
+     vertex.frame.color="gray", vertex.label.color="black", 
+     vertex.label.cex=0.5, vertex.label.dist=2, edge.curved=0.5,edge.arrow.size=.2,vertex.label.cex=.5,vertex.label=NA)
+```
+
+
+## Other APIs
+
+- `Rfacebook` (facebook) <https://cran.r-project.org/web/packages/Rfacebook/Rfacebook.pdf>
+
+- `RedditExtractoR` (reddit) <https://cran.r-project.org/web/packages/RedditExtractoR/RedditExtractoR.pdf>
+
+- `imdbapi` (IMDB) <https://cran.r-project.org/web/packages/imdbapi/imdbapi.pdf>
+
+- `omdbapi`(The Open Movie Database) <https://github.com/hrbrmstr/omdbapi>
+
+
+## API request directly from R
+
+The movie database API <https://www.themoviedb.org/>
+
+- Signup and request for an API key <https://developers.themoviedb.org/3/getting-started/introduction>
+
+- Write functions to make query:
+    
+    - Create a query
+    - From JSON file to dataframe
+    
+- Build your own network based on these functions
+
+## preparation
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("rjson")
+library(rjson)
+#install.packages("jsonlite")
+library(jsonlite)
+```
+
+## search people id
+
+Search people based on the name:
+<https://developers.themoviedb.org/3/search/search-people>
+
+```{r,echo=TRUE,eval=FALSE}
+### get actor/director id based on name
+get_search_people = function(people,api="your-api-key"){
+  
+  search = URLencode(people, reserved = TRUE) 
+  
+  people_url = paste0("https://api.themoviedb.org/3/search/person?api_key=",api,"&language=en-US&query=",
+                      search,"&include_adult=false")
+  people_json = jsonlite::fromJSON(paste(readLines(people_url), collapse=""))
+  
+  total_page = people_json$total_pages
+  if (total_page > 1){
+    people_id_df = data.frame()
+    n = min(5, total_page)
+    for (j in 1:n){
+      url = paste0("https://api.themoviedb.org/3/search/person?api_key=",api,"&language=en-US&query=",
+                   search,"&page=",j,"&include_adult=false")
+      json = jsonlite::fromJSON(paste(readLines(people_url), collapse=""))
+      temp = json$results %>% as.data.frame() %>% select(id, name)
+      people_id_df = rbind(people_id_df, temp)
+    }
+  } else {
+    people_id_df = people_json$results %>% as.data.frame() %>% select(id, name)
+  }
+  
+  return(people_id_df) # this dataframe only contains name and people id
+  
+}
+actress="Julianne Moore" # She comes from NC
+get_search_people(actress)
+```
+
+## search movies based on people id
+
+Search the movies of one person based on id:<https://developers.themoviedb.org/3/people/get-person-movie-credits>
+
+
+```{r,echo=TRUE,eval=FALSE}
+# get movie details of one person with the person id
+get_people_movie = function(id,api="your-api-key"){
+  
+  url = paste0("https://api.themoviedb.org/3/person/",id,"/movie_credits?api_key=",api,"&language=en-US")
+  people_movie_json = jsonlite::fromJSON(paste(readLines(url), collapse=""))
+  people_movie_df = people_movie_json$cast %>% as.data.frame() %>% select(character, poster_path, id, vote_average, original_language,
+                                                                          title, popularity, overview, release_date)
+  base_url = "http://image.tmdb.org/t/p/w500" 
+  people_movie_df = people_movie_df %>% mutate(poster_path = paste0(base_url, poster_path))
+  
+  return(people_movie_df)
+  
+}
+id=1231 # got from the previous function `get_search_people`
+get_people_movie(id)
+```
+
+
