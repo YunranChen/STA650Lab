@@ -95,8 +95,9 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - Other functions see official website
     - Examples: retweet networks, friendship networks
 - Lab 7: API requests
-  - Reddit API requests
-  - IMDB API requests
+  - Build Twitter friendship networks
+  - Other available R packages for API request: `rtweet`,`Rfacebook`,`RedditExtractoR`,`imdbapi`,`omdbapi`
+  - Direct API request from R. `rjson`, `jsonlite`
 - No lab on March 7th (Spring Break).
 - Lab 8: Epidemiological modeling of news spreading on Twitter (course project)
   - How to collect data.
