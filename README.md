@@ -99,7 +99,7 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
   - Other available R packages for API request: `rtweet`,`Rfacebook`,`RedditExtractoR`,`imdbapi`,`omdbapi`
   - Direct API request from R. `rjson`, `jsonlite`
 - No lab on March 7th (Spring Break).
-- Lab 8: Epidemiological modeling of news spreading on Twitter (course project)
+- Lab 8: Epidemiological modeling of news spreading on Twitter (course project)(Ah, spring break!)
   - How to collect data.
   - Basic network analysis.
   - References:
