@@ -104,15 +104,34 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
   - Basic network analysis.
   - References:
     - https://github.com/YunranChen/HiggsBoson 
-- Lab 9: Visualization (March 21st)
-  - Other (two-mode networks, heatmap, ...)
-  - Interaction surface
-  - Dynamic network
+- Lab 9: Visualization 
+  - Visualization for static network: 
+    - Graph: hairball plot
+    - Matrix: `heatmap` in R basic package; `geom_tile` in pkg `ggplot2`
+  - Other static networks:
+    - Two-mode networks (node-specific attribute)
+    - Multiple networks (edge-specific attribute)
+    - ... ( `ggtree`, `ggalluvial`, etc.)
+  - `ggplot2` version for network visualization: 
+    - Comparison between `ggnet2`,`geomnet`,`ggnetwork`
+    - Extension to interactive (`plotly`) , dynamic network (`ggnetwork`)
+  - Other interactive network visualizations: 
+    -  `visNetwork` (good documentation)
+    -  `networkD3`
+    -  `threejs`
+    -  `ggigraph`
+  - Visualization for dynamic networks
+    - Snapshots for the evolving networks: `ggnetwork` (common)
+    - Animation for the evolving networks: `ggplot2` + `gganimate`
+    - `ndtv` pkg (good documentation)
   - References:
-    - https://briatte.github.io/ggnet/
     - http://kateto.net/netscix2016
     - http://kateto.net/network-visualization
+    - http://curleylab.psych.columbia.edu/netviz/
+    - https://journal.r-project.org/archive/2017/RJ-2017-023/RJ-2017-023.pdf
+
 - Lab 10: `AMEN` packages (March 28th)
   - References: 
     - https://github.com/pdhoff/amen/blob/master/inst/doc/amen.pdf 
+    
 - No lab session after March 28th.
