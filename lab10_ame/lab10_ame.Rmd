@@ -1,0 +1,457 @@
+---
+title: "LAB10"
+author: "YunranChen"
+date: "3/28/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+<style>
+slides > slide {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Outline
+
+- Gaussian AME model: `ame`
+- Different relation: `ame(...,model=,...)`
+    - ordinal data
+    - censored and fixed rank nomination data
+    - sampled or missing data
+- symmetric relation: `ame(...,symmetric=TRUE,...)`
+- repeated measures data: longitudal data `ame_rep(Y,Xdyad,Xrow,Xcol)`
+
+Tutorial: <https://github.com/pdhoff/amen/blob/master/inst/doc/amen.pdf>
+
+## `ame`
+
+$$z_{i,j}=\beta_d^Tx_{d,i,j}+\beta_r^Tx_{r,i}+\beta_c^Tx_{c,j}+\mu+a_i+b_j+u_i^Tv_j+\epsilon_{i,j}$$
+
+$$y_{i,j}=g(z_{i,j})$$
+
+`ame(Y,Xd,Xr,Xc,model,R,rvar=TRUE,cvar=TRUE,dcor=TRUE,symmetric=FALSE)`
+
+model:
+
+- "nrm": continuous Y
+- "bin": binary Y
+- "ord": ordinal Y
+- "cbin": censored binary Y
+- "frn": fixed rank Y
+- "rrl": row ranks (relationships across rows of Y are not directly comparable)
+
+- Y: named matrix $n\times n \times p_d$
+- Xd: named array (dyadic covariates)
+- Xr: named matrix (nodal covariates)
+- Xc: named matrix (nodal covariates)
+- R: number (dimension of latent factor)
+
+- rvar,cvar,dcor: whether to include row/column/corr effect or not
+- symmetric: symmetric outcome or not
+
+# Input: prepare the dataset
+
+## prepare the dataset
+
+- Get the Xnode,Xdyad from `igraph` object.
+- Get the Xnode,Xdyad from edgelist dataframe.
+
+```{r,echo=TRUE,message=FALSE}
+library(igraph)
+library(igraphdata)
+library(dplyr)
+```
+
+From `igraph` object:
+
+```{r, echo=TRUE}
+data("USairports")
+?USairports
+USairports
+
+#For vertex attributes -Xnode
+Xnode_ls=vertex_attr(USairports)
+Xnode=matrix(unlist(Xnode_ls),ncol=length(Xnode_ls))
+colnames(Xnode)=names(Xnode_ls)
+rownames(Xnode)=Xnode_ls$name
+Xnode=Xnode[,-1]
+
+#For edge attributes - Xdyad
+Xdyad_ls=edge_attr(USairports)
+Xdyad=array(c(as_adjacency_matrix(USairports,sparse = FALSE),unlist(Xdyad_ls)),dim=c(nrow(Xnode),nrow(Xnode),length(Xdyad_ls)+1))
+dimnames(Xdyad)[[1]]=dimnames(Xdyad)[[2]]=Xnode_ls$name
+dimnames(Xdyad)[[3]]=c("relation",names(Xdyad_ls))
+
+```
+
+From dataframe:
+
+transfer it to a `igraph` then to the array may be the easiest.
+
+```{r,echo=TRUE}
+#Xdyad
+df=igraph::as_data_frame(USairports)
+net=graph_from_data_frame(df)
+
+vnames=V(net)$name
+
+Xdyad_ls=edge_attr(USairports)
+Xdyad=array(c(as_adjacency_matrix(USairports,sparse = FALSE),unlist(Xdyad_ls)),dim=c(nrow(Xnode),nrow(Xnode),length(Xdyad_ls)+1))
+dimnames(Xdyad)[[1]]=dimnames(Xdyad)[[2]]=vnames
+dimnames(Xdyad)[[3]]=c("relation",names(Xdyad_ls))
+
+#Xnode
+#If your nodal attributes stored in a data.frame
+Xnode_df=as.data.frame(Xnode)%>%mutate(Vertex=rownames(Xnode))%>%arrange(Vertex)
+head(Xnode_df)
+
+#Xnode
+#need to match the order of Xnode to the order of the Xdyad
+Xnode_df=Xnode_df%>%arrange(match(Vertex,vnames))
+Xnode=as.matrix(Xnode_df)
+rownames(Xnode)=Xnode[,"Vertex"]
+Xnode=Xnode[,-3]
+Xnode%>%head()
+```
+
+
+# Fit the model: the Gaussian AME model (continuous Y)
+
+## The Gaussian AME model
+
+```{r install, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("amen")
+library(amen)
+library(ggplot2)
+```
+
+---
+
+$y_{i,j}=\mu+a_i+b_j+\epsilon_{i,j}$
+
+```{r,echo=TRUE}
+# use the trade data (export) from top 30 countries ranked by gdp
+data(IR90s)
+names(IR90s) # list
+dim(IR90s$dyadvars) #- array
+dimnames(IR90s$dyadvars)
+gdp=IR90s$nodevars[,2]
+topgdp=which(gdp>=sort(gdp,decreasing = TRUE)[30])
+Y=log(IR90s$dyadvars[topgdp,topgdp,2]+1)
+Y[1:5,1:5]
+```
+
+## Social relations model (SRM) 
+
+$$y_{i,j}=\mu+a_i+b_j+\epsilon_{i,j}$$
+
+Input: 
+Y - a named matrix
+
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+# fit the model
+fit_SRM=ame(Y,model="nrm",plot=FALSE,print = FALSE) #normal AME model; by default: niter=10,000; save every 25; burnin=500
+
+```
+
+```{r,echo=TRUE}
+#output
+names(fit_SRM)
+
+mean(fit_SRM$BETA) #mu_hat
+(muhat=mean(Y,na.rm = TRUE))
+
+apply(fit_SRM$VC,2,mean) # covariance 
+ahat=rowMeans(Y,na.rm = TRUE)-mean(Y,na.rm = TRUE)
+bhat=colMeans(Y,na.rm = TRUE)-mean(Y,na.rm = TRUE)
+(corab=cov(cbind(ahat,bhat)))
+(R=Y-(muhat+outer(ahat,bhat,"+")))
+cov(cbind(c(R),c(t(R))),use="complete") #ignore the NAs 
+
+ggplot(data=data.frame(anova=ahat,posterior=fit_SRM$APM),aes(x=anova,y=posterior))+
+  geom_point()+geom_abline(slope=1,intercept = 0)+
+  coord_fixed()+theme_bw()
+
+ggplot(data=data.frame(anova=bhat,posterior=fit_SRM$BPM),aes(x=anova,y=posterior))+
+  geom_point()+geom_abline(slope=1,intercept = 0)+
+  coord_fixed()+theme_bw()
+
+fit_SRM$GOF[1:2,] #statistics to check the goodness of fitting
+
+fit_SRM$EZ[1,] #outer(fit_SRM$APM,fit_SRM$BPM,"+")+mean(fit_SRM$BETA)
+
+```
+
+missing dyadic data
+
+Can fill the NAs by MCMC approximation.
+
+Appropriate when missing at random. (many types of link tracing designs, such as egocentric and snowball sampling)
+
+```{r,echo=TRUE}
+fit_SRM$YPM[1,] #estimate of Y: add epsilon
+```
+
+
+
+```{r,echo=TRUE}
+#summary
+summary(fit_SRM) #significant non-zero
+
+```
+
+## Social relations regression model (SRRM) 
+
+$$y_{i,j}=\beta_d^Tx_{d,i,j}+\beta_r^Tx_{r,i}+\beta_c^Tx_{c,j}+\mu+a_i+b_j+\epsilon_{i,j}$$
+
+Input:
+Y- a named matrix
+Xd - a named array $n\times n \times p_d$ dyadic covariates
+Xr - a named matrix $n\times p_r$
+Xc - a named matrix $n\times p_c$
+
+```{r,echo=TRUE}
+#nodal covariates
+colnames(IR90s$nodevars)
+Xn=IR90s$nodevars[topgdp,]
+Xn[,1:2]=log(Xn[,1:2]) # use the log 
+
+#dyadic covariates
+dimnames(IR90s$dyadvars)[[3]]
+Xd=IR90s$dyadvars[topgdp,topgdp,c(1,3,4,5)]
+Xd[,,3]=log(Xd[,,3]) # use log
+```
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+fit_srrm=ame(Y,Xd=Xd,Xr=Xn,Xc=Xn,model = "nrm",plot = FALSE)
+```
+
+```{r,echo=TRUE}
+summary(fit_srrm)
+```
+
+## do not include the row variance, column variance or dyadic correlation
+
+$$y_{i,j}=\beta_d^Tx_{d,i,j}+\beta_r^Tx_{r,i}+\beta_c^Tx_{c,j}+\mu+\epsilon_{i,j}$$
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+fit_rm=ame(Y,Xd=Xd,Xr=Xn,Xc=Xn,model = "nrm",rvar = FALSE,cvar = FALSE,dcor=FALSE,plot=FALSE,print = FALSE)
+```
+
+```{r,echo=TRUE}
+summary(fit_rm)
+```
+
+## additive and multiplicative effects model (ame)
+
+$$y_{i,j}=\beta_d^Tx_{d,i,j}+\beta_r^Tx_{r,i}+\beta_c^Tx_{c,j}+\mu+a_i+b_j+u_i^Tv_j+\epsilon_{i,j}$$
+Input:
+
+Y- a named matrix
+Xd - a named array $n\times n \times p_d$ dyadic covariates
+Xr - a named matrix $n\times p_r$
+Xc - a named matrix $n\times p_c$
+R - dimension of latent factor $U$ and $V$ are $n\times R$ matrices
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+fit_ame2=ame(Y,Xd=Xd,Xr=Xn,Xc=Xn,model = "nrm",R=2,plot=FALSE,print = FALSE)
+```
+
+```{r,echo=TRUE}
+summary(fit_ame2)
+```
+
+## circle plot for estimated latent factor
+
+```{r,echo=TRUE}
+circplot(Y,U=fit_ame2$U,V=fit_ame2$V) #only available for 2 dimension latent factor
+```
+
+# Choice of `model` in `ame`: binary, ordinal, discrete or sparse relations
+
+## binary outcome
+
+Probit model.
+
+$$z_{i,j}=\beta_d^Tx_{d,i,j}+\beta_r^Tx_{r,i}+\beta_c^Tx_{c,j}+\mu+a_i+b_j+u_i^Tv_j+\epsilon_{i,j}$$
+
+$$y_{i,j}=1(z_{i,j}>0)$$
+Interpretation on the coefficients: one unit change in $x_i$ leads to a $\beta_i$ change in the z-score of Y: $\beta_i\phi(\beta_0+\beta_1x_1+...)$
+
+```{r,echo=TRUE}
+data("lazegalaw")
+names(lazegalaw)
+dimnames(lazegalaw$X) #nodal covariates
+dimnames(lazegalaw$Y) #relation and dyadic covariates
+Y=lazegalaw$Y[,,2]
+Xd=lazegalaw$Y[,,-2]
+Xn=lazegalaw$X
+```
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+fit_amebin3=ame(Y,Xd=Xd,Xr=Xn,Xc=Xn,model = "bin",R=2,plot=FALSE,print = FALSE)
+```
+
+## ordinal outcome
+
+ordinal probit model
+
+```{r,echo=TRUE}
+data(sheep)
+names(sheep) 
+Y=sheep$dom
+x=sheep$age-mean(sheep$age) #centralize - beta can be (-,+)
+Xd=outer(x,x)
+Xn=cbind(x,x^2)
+colnames(Xn)=c("age","age2")
+
+```
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+fit_ameord=ame(Y = Y,Xdyad = Xd,Xrow = Xn,Xcol = Xn,model = "ord",plot=FALSE,print = FALSE)
+```
+
+```{r,echo=TRUE}
+summary(fit_ameord)
+```
+
+
+## censored and fixed rank nomination data
+
+Fix rank nomination: named a fixed number of people. -- ordinal + censored
+
+`(...,model="frn",odmax=..)`
+
+`odmax`: maximum number of links each row may have
+
+higher shows stronger relationship -- make sure your data follows the right order.
+
+```{r,echo=TRUE}
+data("sampsonmonks")
+dimnames(sampsonmonks)
+Y=sampsonmonks[,,3] #like
+apply(Y>0,1,sum,na.rm=T) # named at least 4 people
+
+
+```
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+fit_amefrn=ame(Y,R=2,model = "frn",odmax = 4,plot=FALSE,print = FALSE) 
+```
+
+```{r,echo=TRUE}
+summary(fit_amefrn)
+```
+
+
+Sensored binary
+
+`(...,model="cbin",odmax=..)`
+
+`odmax`: maximum number of links each row may have
+
+# symmetric outcome: `symmetric=TRUE`
+
+## symmetric outcome: `symmetric=TRUE`
+
+$$z_{i,j}=\beta_d^Tx_{d,i,j}+\beta_n^Tx_{i}+\beta_n^Tx_{j}+\mu+a_i+a_j+u_i^T\Lambda u_j+\epsilon_{i,j}$$
+
+$$y_{i,j}=g(z_{i,j})$$
+`symmetric=TRUE`
+
+```{r,echo=TRUE}
+data("coldwar")
+names(coldwar)
+
+Y=sign(apply(coldwar$cc,c(1,2),mean)) #avg across time - binary relation
+
+Xn=cbind(apply(log(coldwar$gdp),1,mean),
+         sign(apply(coldwar$polity,1,mean))
+         )
+Xn[,1]=Xn[,1]-mean(Xn[,1]) #centralize
+dimnames(Xn)[[2]]=c("lgdp","polity")
+
+Xd=array(dim=c(nrow(Y),nrow(Y),3))
+Xd[,,1]=outer(Xn[,1],Xn[,1]) 
+Xd[,,2]=outer(Xn[,2],Xn[,2]) 
+Xd[,,3]=log(coldwar$distance)
+dimnames(Xd)[[3]]=c("igdp","ipol","ldist")
+```
+
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+# fit the model
+fit_amesym1=ame(Y,Xd,Xn,R=1,symmetric = TRUE,model = "ord",plot=FALSE,print = FALSE)
+```
+
+```{r,echo=TRUE}
+summary(fit_amesym1)
+names(fit_amesym1)
+```
+
+
+# `ame_rep()` for longitudinal outcome
+
+## repeated measures data: longitudinal outcome
+
+$$z_{i,j,t}=\beta_d^Tx_{d,i,j,t}+\beta_r^Tx_{r,i,t}+\beta_c^Tx_{c,j,t}+\mu+a_i+b_j+u_i^Tv_j+\epsilon_{i,j,t}$$
+
+$$y_{i,j,t}=g(z_{i,j,t})$$
+
+For $\beta_r^Tx_{r,i,t}$ can also consider $\beta_r^Tx_{r,i}$. For example, gender.
+
+For $\beta_d^Tx_{d,i,j,t}$ can consider $y_{i,j,t-1}$ or $y_{j,i,t-1}$ or more. (autoregression)
+
+`ame_rep(Y,Xdyad,Xrow,Xcol)`
+
+Add extra dimension for the time $T$. For time-invariant covariates, need to construct array by repeating the matrix across time.
+
+Example: 
+
+```{r, out.width = "850px"}
+knitr::include_graphics("/Users/yunranchen/GoDuke/18Spring/STA650TA/lab/materials/lab10/model.png")
+```
+
+```{r,echo=TRUE}
+data("dutchcollege")
+names(dutchcollege)
+dim(dutchcollege$Y)
+c(dutchcollege$Y[,,1])%>%unique() #
+Y=1*(dutchcollege$Y>=2)[,,2:7] # transfer to binary relation; 
+n=dim(Y)[1]
+t=dim(Y)[3]
+
+#nodal covariates
+colnames(dutchcollege$X)
+Xnode=dutchcollege$X[,1:2]
+Xnode=array(Xnode,dim=c(n,ncol(Xnode),t)) #repeat the X across time
+dimnames(Xnode)[[2]]=c("male","smoker")
+
+# dyadic covariates
+Xdyad=array(dim=c(n,n,5,t))
+Xdyad[,,1,]=1*(dutchcollege$Y>=2)[,,1:6] #lag Y
+Xdyad[,,2,]=array(apply(Xdyad[,,1,],3,t),dim=c(n,n,t)) #transpose the matrix
+Xdyad[,,3,]=outer(Xnode[,1,1],Xnode[,1,1])
+Xdyad[,,4,]=outer(Xnode[,2,1],Xnode[,2,1])
+Xdyad[,,5,]=outer(dutchcollege$X[,3],dutchcollege$X[,3],"==") #same program
+dimnames(Xdyad)[[3]]=c("Ylag","tYlag","bothmale","bothsmoke","sameprog")
+```
+
+```{r,echo=TRUE,cache=TRUE,message=FALSE}
+# fit the model
+fit_amet=ame_rep(Y,Xdyad,Xnode,Xnode,model = "bin",plot=FALSE,print = FALSE)
+```
+
+```{r,echo=TRUE}
+summary(fit_amet)
+```
+
