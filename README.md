@@ -129,7 +129,13 @@ If you are not familiar with R, see http://www2.stat.duke.edu/~cr173/Sta523_Fa16
     - https://journal.r-project.org/archive/2017/RJ-2017-023/RJ-2017-023.pdf
 
 - Lab 10: `AMEN` packages (March 28th)
-  - References: 
-    - https://github.com/pdhoff/amen/blob/master/inst/doc/amen.pdf 
+  - Gaussian AME model: `ame`
+  - Different relation: `ame(...,model=,...)`
+    - ordinal data
+    - censored and fixed rank nomination data
+    - sampled or missing data
+  - symmetric relation: `ame(...,symmetric=TRUE,...)`
+  - repeated measures data: longitudal data `ame_rep(Y,Xdyad,Xrow,Xcol)`
+  - Tutorial: https://github.com/pdhoff/amen/blob/master/inst/doc/amen.pdf 
     
 - No lab session after March 28th.
