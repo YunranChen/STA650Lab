@@ -1,8 +1,6 @@
 # STA650Lab
 Lab materials of STA650/450 Social Network will be posted here.
 
-Website based on the lab materials is available at : https://yunranchen.github.io/intro-network-R/
-
 Lab session: Thursday 4:40 - 5:55 pm, Gray 228.
 
 Office hour: Wednesday 12:00 - 1:00 pm, Old Chem 025.
