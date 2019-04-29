@@ -1,4 +1,7 @@
 # STA650Lab
+
+Website: https://yunranchen.github.io/intro-net-r/
+
 Lab materials of STA650/450 Social Network will be posted here.
 
 Lab session: Thursday 4:40 - 5:55 pm, Gray 228.
